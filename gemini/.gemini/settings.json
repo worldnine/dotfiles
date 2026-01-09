@@ -1,0 +1,35 @@
+{
+  "general": {
+    "checkpointing": {
+      "enabled": true
+    },
+    "preferredEditor": "vscode",
+    "vimMode": false,
+    "previewFeatures": true
+  },
+  "ide": {
+    "hasSeenNudge": true,
+    "enabled": true
+  },
+  "ui": {
+    "footer": {
+      "hideSandboxStatus": true
+    },
+    "showCitations": true,
+    "theme": "Default"
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "tools": {
+    "shell": {
+      "enableInteractiveShell": true,
+      "showColor": true
+    }
+  },
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(cargo:*)",
+      "Bash(python:*)",
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Read(**)"
+    ],
+    "deny": [
+      "Bash(npm publish:*)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat | bash $HOME/.claude/notification-handler.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/stop-handler.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "cat | bash $HOME/.claude/statusline-handler.sh"
+  },
+  "alwaysThinkingEnabled": true,
+  "language": "Japanese"
+}

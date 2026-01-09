@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# tmux プラグイン（別途インストール）
+tmux/.tmux/plugins/
+
+# Neovim プラグインキャッシュ
+nvim/.config/nvim/plugin/
+nvim/.config/nvim/.luarc.json
+
+# シェル履歴
+zsh/.zsh_history
+
+# ローカル設定（個人用）
+*.local
+*.local.json
