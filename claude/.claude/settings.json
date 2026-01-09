@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat | bash $HOME/.claude/notification-handler.sh"
+            "command": "cat | bash ~/.claude/notification-handler.sh"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $HOME/.claude/stop-handler.sh"
+            "command": "bash ~/.claude/stop-handler.sh"
           }
         ]
       }
@@ -40,7 +40,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "cat | bash $HOME/.claude/statusline-handler.sh"
+    "command": "bash ~/.claude/statusline-handler.sh"
   },
   "language": "日本語",
   "alwaysThinkingEnabled": true
