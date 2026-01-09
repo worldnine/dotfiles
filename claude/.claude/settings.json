@@ -11,7 +11,8 @@
     ],
     "deny": [
       "Bash(npm publish:*)"
-    ]
+    ],
+    "defaultMode": "default"
   },
   "hooks": {
     "Notification": [
@@ -41,6 +42,6 @@
     "type": "command",
     "command": "cat | bash $HOME/.claude/statusline-handler.sh"
   },
-  "alwaysThinkingEnabled": true,
-  "language": "Japanese"
+  "language": "日本語",
+  "alwaysThinkingEnabled": true
 }
