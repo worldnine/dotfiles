@@ -14,3 +14,4 @@ zsh/.zsh_history
 # ローカル設定（個人用）
 *.local
 *.local.json
+gemini/.gemini/.env
