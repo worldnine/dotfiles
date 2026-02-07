@@ -1,13 +1,46 @@
 {
   "permissions": {
     "allow": [
+      "Edit(**)",
+      "Write(**)",
+      "Read(**)",
       "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
       "Bash(git:*)",
+      "Bash(gh:*)",
       "Bash(cargo:*)",
       "Bash(python:*)",
-      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
+      "Bash(uv:*)",
+      "Bash(go:*)",
+      "Bash(make:*)",
+      "Bash(docker:*)",
+      "Bash(brew:*)",
+      "Bash(stow:*)",
       "Bash(curl:*)",
-      "Read(**)"
+      "Bash(chmod:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(ln:*)",
+      "Bash(touch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(which:*)",
+      "Bash(bash:*)",
+      "Bash(sh:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(diff:*)",
+      "Bash(wc:*)",
+      "mcp__pencil"
     ],
     "deny": [
       "Bash(npm publish:*)"
@@ -41,6 +74,9 @@
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-handler.sh"
+  },
+  "env": {
+    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   },
   "language": "日本語",
   "alwaysThinkingEnabled": true
