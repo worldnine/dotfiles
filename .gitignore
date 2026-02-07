@@ -15,3 +15,21 @@ zsh/.zsh_history
 *.local
 *.local.json
 gemini/.gemini/.env
+
+# Codex CLI（自動生成・機密データ）
+codex/.codex/auth.json
+codex/.codex/history.jsonl
+codex/.codex/models_cache.json
+codex/.codex/version.json
+codex/.codex/.personality_migration
+codex/.codex/sessions/
+codex/.codex/log/
+codex/.codex/tmp/
+codex/.codex/skills/
+
+# Gemini CLI（自動生成・機密データ）
+gemini/.gemini/google_accounts.json
+gemini/.gemini/oauth_creds.json
+gemini/.gemini/history/
+gemini/.gemini/antigravity/
+gemini/.gemini/tmp/

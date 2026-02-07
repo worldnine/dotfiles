@@ -1,10 +1,11 @@
-model = "gpt-5.1-codex-max"
-notify = ["bash", "$HOME/.codex/notify_macos.sh"]
+model = "gpt-5.2-codex"
+notify = [ "bash", "$HOME/.codex/notify_macos.sh" ]
 model_reasoning_effort = "medium"
+personality = "pragmatic"
 
 [features]
 web_search_request = true
 
 [mcp_servers.playwright]
 command = "npx"
-args = ["@playwright/mcp@latest"]
+args = [ "@playwright/mcp@latest" ]

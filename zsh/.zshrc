@@ -24,7 +24,7 @@ function toggle_starship() {
 }
 
 # PATH設定
-export PATH="$HOME/.bin:$HOME/.deno/bin:$GOPATH/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.bin:$HOME/.deno/bin:$GOPATH/bin:$PATH"
 export PATH="/opt/homebrew/opt/ripgrep/bin:$PATH"
 
 # volta（使用しない）
