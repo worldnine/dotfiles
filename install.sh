@@ -13,18 +13,57 @@ if ! command -v stow &> /dev/null; then
     exit 1
 fi
 
-# 利用可能なパッケージ
+# stow で管理するパッケージ（codex/gemini は個別管理のため除外）
 PACKAGES=(
     "zsh"
     "git"
     "starship"
     "ghostty"
     "claude"
-    "gemini"
-    "codex"
     "nvim"
     "tmux"
 )
+
+# codex: 安定ファイルはシンボリックリンク、CLI自動書き込み対象はコピー
+install_codex() {
+    echo "  codex をセットアップ中..."
+    # 既存の stow リンクがあれば解除
+    if [ -L "$HOME/.codex" ]; then
+        echo "    既存のディレクトリシンボリックリンクを解除..."
+        rm "$HOME/.codex"
+    fi
+    mkdir -p "$HOME/.codex"
+    # 安定ファイル → シンボリックリンク
+    ln -sf "$DOTFILES_DIR/codex/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
+    ln -sf "$DOTFILES_DIR/codex/.codex/notify_macos.sh" "$HOME/.codex/notify_macos.sh"
+    # CLI自動書き込み対象 → コピー（既存があればスキップ）
+    if [ ! -f "$HOME/.codex/config.toml" ]; then
+        cp "$DOTFILES_DIR/codex/.codex/config.toml" "$HOME/.codex/config.toml"
+        echo "    config.toml をコピーしました"
+    else
+        echo "    config.toml は既存のためスキップ"
+    fi
+}
+
+# gemini: 安定ファイルはシンボリックリンク、CLI自動書き込み対象はコピー
+install_gemini() {
+    echo "  gemini をセットアップ中..."
+    # 既存の stow リンクがあれば解除
+    if [ -L "$HOME/.gemini" ]; then
+        echo "    既存のディレクトリシンボリックリンクを解除..."
+        rm "$HOME/.gemini"
+    fi
+    mkdir -p "$HOME/.gemini"
+    # 安定ファイル → シンボリックリンク
+    ln -sf "$DOTFILES_DIR/gemini/.gemini/GEMINI.md" "$HOME/.gemini/GEMINI.md"
+    # CLI自動書き込み対象 → コピー（既存があればスキップ）
+    if [ ! -f "$HOME/.gemini/settings.json" ]; then
+        cp "$DOTFILES_DIR/gemini/.gemini/settings.json" "$HOME/.gemini/settings.json"
+        echo "    settings.json をコピーしました"
+    else
+        echo "    settings.json は既存のためスキップ"
+    fi
+}
 
 # 全パッケージをインストール
 echo "dotfiles をインストールしています..."
@@ -34,6 +73,10 @@ for pkg in "${PACKAGES[@]}"; do
         stow -v "$pkg"
     fi
 done
+
+# codex/gemini は個別にセットアップ
+install_codex
+install_gemini
 
 # TPMのインストール（tmux）
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
