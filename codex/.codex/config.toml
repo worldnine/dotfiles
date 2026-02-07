@@ -1,5 +1,5 @@
 model = "gpt-5.2-codex"
-notify = [ "bash", "$HOME/.codex/notify_macos.sh" ]
+notify = [ "bash", "-c", "~/.codex/notify_macos.sh" ]
 model_reasoning_effort = "medium"
 personality = "pragmatic"
 
