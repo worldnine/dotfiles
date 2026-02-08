@@ -6,8 +6,10 @@
 # GOPATH
 export GOPATH="$HOME/go"
 
-# Starship
-eval "$(starship init zsh)"
+# Starship: 非interactive環境での "can't change option: zle" エラーを防ぐ
+if [[ -o interactive ]]; then
+  eval "$(starship init zsh)"
+fi
 
 # Starshipのトグル機能 ターミナルでtoggle_starshipコマンドを実行することで、Starshipプロンプトの表示をオン/オフできるようになります。わいわい
 function toggle_starship() {
@@ -52,8 +54,8 @@ fi
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# avr-gccのバージョンを固定
-export PATH="/usr/local/opt/avr-gcc@8/bin:$PATH"
+# avr-gcc@8: 存在しないパスのためコメントアウト
+# export PATH="/usr/local/opt/avr-gcc@8/bin:$PATH"
 
 # tmuxのアタッチまたは新規セッション作成スクリプト
 # ~/.zsh/tmux-attach-or-new-session.shを作成しておくこと
@@ -69,10 +71,12 @@ else
 fi
 
 export PATH="$HOME/bin:$PATH"
-eval "$(gh copilot alias -- zsh)"
+# gh copilot alias: 遅延ロード化（初回使用時に初期化）
+ghcs() { unset -f ghcs ghce; eval "$(gh copilot alias -- zsh)"; ghcs "$@"; }
+ghce() { unset -f ghcs ghce; eval "$(gh copilot alias -- zsh)"; ghce "$@"; }
 
 # miseを使ったNodeのバージョン管理（Homebrewより優先）
-eval "$(/Users/nagata/.local/bin/mise activate zsh)"
+eval "$(/Users/nagata/.local/bin/mise activate zsh --shims)"
 
 # Homebrewのnodeはアンインストール推奨（不要な場合）
 # export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
@@ -104,7 +108,10 @@ export VISUAL="/usr/local/bin/code --wait"
 
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# fzf: 非TTY環境でのzleエラーを抑制
+if [[ -o interactive ]]; then
+  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+fi
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 eval "$(ruby ~/.local/try.rb init ~/src/tries)"
@@ -113,8 +120,8 @@ eval "$(ruby ~/.local/try.rb init ~/src/tries)"
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
 # [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
 
-# tryj (LLM連携版try)
-eval "$($HOME/.local/tryj init ~/src/tries)"
+# tryj: 使用していないためコメントアウト
+# eval "$($HOME/.local/tryj init ~/src/tries)"
 
 # Added by Antigravity
 export PATH="/Users/nagata/.antigravity/antigravity/bin:$PATH"

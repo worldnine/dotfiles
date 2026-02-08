@@ -8,12 +8,10 @@ source ~/.profile
 emulate zsh
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
-eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# Setting PATH for Python 3.11
-# The original version is saved in .zprofile.pysave
-PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:${PATH}"
-export PATH
+# Python 3.11 PATH削除: miseで管理しているため不要
+# PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:${PATH}"
+# export PATH
 
 # Set MAMP's latest PHP version without 8
 PHP_VERSION=$(ls /Applications/MAMP/bin/php/ | grep -E 'php8' | sort -V | tail -1)

@@ -76,7 +76,8 @@
     "command": "bash ~/.claude/statusline-handler.sh"
   },
   "env": {
-    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "language": "日本語",
   "alwaysThinkingEnabled": true
