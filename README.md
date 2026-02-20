@@ -12,7 +12,11 @@
 - **ghostty** - ターミナルエミュレータ
 - **claude** - Claude Code
 - **nvim** - Neovim (LazyVim)
-- **tmux** - tmux + TPM
+- **tmux** - tmux ([oh-my-tmux](https://github.com/gpakosz/.tmux)) + TPM
+  - `tmux.conf.local` - oh-my-tmux ユーザー設定（Tokyo Night テーマ等）
+  - `scripts/git-statusline.sh` - ステータスラインの git 情報表示
+  - `scripts/git-project-or-path.sh` - ステータスラインのプロジェクト名表示
+  - `scripts/tmux-cleanup.sh` - 起動時のセッション・resurrectファイル自動クリーンアップ
 
 ### 個別管理（シンボリックリンク + コピー）
 
@@ -36,12 +40,14 @@ cd ~/dotfiles
 brew install stow
 
 # 全ての設定をインストール
+# oh-my-tmux のクローン、TPM のインストール、stow リンクを一括実行
 ./install.sh
 
 # または個別にインストール（stow管理パッケージのみ）
 stow zsh
 stow nvim
 # 注意: codex/gemini は stow ではなく install.sh で管理
+# 注意: tmux は stow に加え oh-my-tmux と TPM が必要（install.sh が自動処理）
 ```
 
 ## インストール後
