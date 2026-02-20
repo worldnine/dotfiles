@@ -78,10 +78,21 @@ done
 install_codex
 install_gemini
 
-# TPMのインストール（tmux）
-if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+# oh-my-tmux のインストール
+if [ ! -d "$HOME/.config/tmux/oh-my-tmux" ]; then
+    echo "oh-my-tmux をインストール中..."
+    git clone https://github.com/gpakosz/.tmux.git "$HOME/.config/tmux/oh-my-tmux"
+fi
+# oh-my-tmux の tmux.conf へのシンボリックリンクを作成
+if [ ! -L "$HOME/.config/tmux/tmux.conf" ]; then
+    ln -sf "$HOME/.config/tmux/oh-my-tmux/.tmux.conf" "$HOME/.config/tmux/tmux.conf"
+    echo "  tmux.conf → oh-my-tmux/.tmux.conf のリンクを作成しました"
+fi
+
+# TPM のインストール（tmux）
+if [ ! -d "$HOME/.config/tmux/plugins/tpm" ]; then
     echo "TPM (Tmux Plugin Manager) をインストール中..."
-    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+    git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
 fi
 
 echo ""

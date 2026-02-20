@@ -14,6 +14,8 @@ zsh/.zsh_history
 # ローカル設定（個人用）
 *.local
 *.local.json
+# oh-my-tmux のユーザー設定は管理対象
+!tmux/.config/tmux/tmux.conf.local
 gemini/.gemini/.env
 
 # Codex CLI（自動生成・機密データ）
