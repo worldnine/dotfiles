@@ -6,7 +6,8 @@
 # コンテキスト使用率をリアルタイムで statusline に表示
 #
 # 表示レイアウト:
-# 1行目: * Opus 4.6  ● 57.8K(29%)  58% ▓▓▓▓▓│░░░░ 6pm  5% ░│░░░░░░░░░ 3/8
+# 1行目: * Opus 4.6  ● 57.8K(29%)  58% ███▍│░░░░░ 6pm  5% ▎│░░░░░░░░░ 3/8
+# （バーは背景色+eighth-block遷移セルで80段階の高解像度表示、bun依存）
 # 2行目: [WT] project-name on git main +10 -5
 #
 # 使用方法:
@@ -23,9 +24,13 @@
 #   DEBUG_STATUSLINE=1 を設定すると詳細ログが出力される
 #
 
+# bun のパス補完（シェルプロファイルが未ロードの環境用）
+[ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"
+
 USAGE_CACHE="/tmp/claude-statusline-usage.json"
 USAGE_CACHE_TTL=60  # キャッシュ有効期間（秒）
 CONTEXT_MAX_TOKENS=200000  # コンテキスト制限の概算値（トークン数表示の概算用）
+BAR_RENDERER="$HOME/.claude/bar-renderer.ts"  # 高解像度バーレンダラー（bun実行）
 
 # アイコン設定
 setup_icons() {
@@ -117,31 +122,18 @@ get_context_color() {
     fi
 }
 
-# プログレスバー生成（10文字幅、細線スタイル ━/─ + ペーシングマーカー│）
-# $1: 使用率(0-100)  $2: ペーシングターゲット(0-100, 省略可)  $3: ANSIカラー
-make_bar() {
-    local pct=$1 target=${2:-} color=${3:-} width=10
-    local filled=$((pct * width / 100))
-    [ "$filled" -gt "$width" ] && filled=$width
-    local target_pos=-1
-    if [ -n "$target" ] && [ "$target" -ge 0 ] 2>/dev/null && [ "$target" -le 100 ]; then
-        target_pos=$((target * width / 100))
-        [ "$target_pos" -ge "$width" ] && target_pos=$((width - 1))
+# 使用率に応じた色名（bar-renderer.ts 用）
+# $1: 使用率(0-100)  $2: ペーシングターゲット(0-100, 省略可)
+# color_for_pct() と同じロジックで色名を返す
+color_name_for_pct() {
+    local pct=$1 target=${2:-}
+    if [ "$pct" -ge 80 ]; then
+        echo "red"
+    elif [ -n "$target" ] && [ "$pct" -gt "$target" ] && [ "$pct" -ge 12 ]; then
+        echo "orange"
+    else
+        echo "default"
     fi
-    local MARKER_COLOR=$'\033[38;5;174m'
-    local DIM=$'\033[2m'
-    local RESET=$'\033[0m'
-    local bar=""
-    for ((i=0; i<width; i++)); do
-        if [ "$i" -eq "$target_pos" ]; then
-            bar="${bar}${MARKER_COLOR}│${RESET}${color}"
-        elif [ "$i" -lt "$filled" ]; then
-            bar="${bar}━"
-        else
-            bar="${bar}${DIM}─${RESET}${color}"
-        fi
-    done
-    printf "%s" "$bar"
 }
 
 # ペーシングターゲット計算
@@ -265,37 +257,66 @@ main() {
     # Usage APIデータ取得・表示
     usage_data=$(get_usage_data)
     if [ -n "$usage_data" ]; then
-        # 5時間枠
+        # データ抽出
         five_hr_pct=$(echo "$usage_data" | jq -r '.five_hour.utilization // 0' 2>/dev/null | awk '{printf "%d", $1}')
         five_hr_reset=$(echo "$usage_data" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
+        seven_day_pct=$(echo "$usage_data" | jq -r '.seven_day.utilization // 0' 2>/dev/null | awk '{printf "%d", $1}')
+        seven_day_reset=$(echo "$usage_data" | jq -r '.seven_day.resets_at // empty' 2>/dev/null)
 
+        # 各枠の計算（色・ターゲット・リセット時刻）
+        five_valid=false five_target="" five_color="" five_color_name="" five_reset_str="" five_bar=""
         if [ -n "$five_hr_pct" ] && [ "$five_hr_pct" != "null" ]; then
+            five_valid=true
             five_target=$(calc_pacing_target "$five_hr_reset" 18000)
             five_color=$(color_for_pct "$five_hr_pct" "$five_target")
-            five_bar=$(make_bar "$five_hr_pct" "$five_target" "$five_color")
-            five_reset_str=""
+            five_color_name=$(color_name_for_pct "$five_hr_pct" "$five_target")
             if [ -n "$five_hr_reset" ] && [ "$five_hr_reset" != "null" ]; then
                 five_reset_str=$(format_remaining "$five_hr_reset")
             fi
+        fi
+
+        seven_valid=false seven_target="" seven_color="" seven_color_name="" seven_reset_str="" seven_bar=""
+        if [ -n "$seven_day_pct" ] && [ "$seven_day_pct" != "null" ]; then
+            seven_valid=true
+            seven_target=$(calc_pacing_target "$seven_day_reset" 604800)
+            seven_color=$(color_for_pct "$seven_day_pct" "$seven_target")
+            seven_color_name=$(color_name_for_pct "$seven_day_pct" "$seven_target")
+            if [ -n "$seven_day_reset" ] && [ "$seven_day_reset" != "null" ]; then
+                seven_reset_str=$(format_remaining "$seven_day_reset")
+            fi
+        fi
+
+        # バーを1回の bun 呼び出しでまとめて描画
+        bar_args=()
+        if $five_valid; then
+            bar_args+=("$five_hr_pct" "10" "${five_target:--1}" "$five_color_name")
+        fi
+        if $seven_valid; then
+            $five_valid && bar_args+=("--")
+            bar_args+=("$seven_day_pct" "10" "${seven_target:--1}" "$seven_color_name")
+        fi
+
+        if [ ${#bar_args[@]} -gt 0 ]; then
+            bar_output=$(bun run "$BAR_RENDERER" "${bar_args[@]}" 2>/dev/null)
+            if $five_valid && $seven_valid; then
+                five_bar="${bar_output%%$'\n'*}"
+                seven_bar="${bar_output#*$'\n'}"
+            elif $five_valid; then
+                five_bar="$bar_output"
+            else
+                seven_bar="$bar_output"
+            fi
+        fi
+
+        # line1 に追加
+        if $five_valid; then
             if [ -n "$five_reset_str" ]; then
                 line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
             else
                 line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
             fi
         fi
-
-        # 7日枠
-        seven_day_pct=$(echo "$usage_data" | jq -r '.seven_day.utilization // 0' 2>/dev/null | awk '{printf "%d", $1}')
-        seven_day_reset=$(echo "$usage_data" | jq -r '.seven_day.resets_at // empty' 2>/dev/null)
-
-        if [ -n "$seven_day_pct" ] && [ "$seven_day_pct" != "null" ]; then
-            seven_target=$(calc_pacing_target "$seven_day_reset" 604800)
-            seven_color=$(color_for_pct "$seven_day_pct" "$seven_target")
-            seven_bar=$(make_bar "$seven_day_pct" "$seven_target" "$seven_color")
-            seven_reset_str=""
-            if [ -n "$seven_day_reset" ] && [ "$seven_day_reset" != "null" ]; then
-                seven_reset_str=$(format_remaining "$seven_day_reset")
-            fi
+        if $seven_valid; then
             if [ -n "$seven_reset_str" ]; then
                 line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
             else
