@@ -6,7 +6,7 @@
 # コンテキスト使用率をリアルタイムで statusline に表示
 #
 # 表示レイアウト:
-# 1行目: * Opus 4.6  ● 57.8K(29%)  58% ███▍│░░░░░ 6pm  5% ▎│░░░░░░░░░ 3/8
+# 1行目: * Opus 4.6  29% ██▉░░░░░░░ 142.2K  58% ███▍│░░░░░ 6pm  5% ▎│░░░░░░░░░ 3/8
 # （バーは背景色+eighth-block遷移セルで80段階の高解像度表示、bun依存）
 # 2行目: [WT] project-name on git main +10 -5
 #
@@ -36,7 +36,6 @@ BAR_RENDERER="$HOME/.claude/bar-renderer.ts"  # 高解像度バーレンダラ�
 setup_icons() {
     ICON_TERMINAL="*"
     ICON_TREE="[WT]"
-    ICON_CONTEXT="●"
 }
 
 # カラー設定
@@ -122,6 +121,16 @@ get_context_color() {
     fi
 }
 
+# コンテキスト使用率に応じた色名（bar-renderer.ts 用）
+# get_context_color() と同じ閾値（<50% デフォルト、50-80% オレンジ、≥80% 赤）
+context_color_name() {
+    local pct=$1
+    if [ "$pct" -ge 80 ]; then echo "red"
+    elif [ "$pct" -ge 50 ]; then echo "orange"
+    else echo "default"
+    fi
+}
+
 # 使用率に応じた色名（bar-renderer.ts 用）
 # $1: 使用率(0-100)  $2: ペーシングターゲット(0-100, 省略可)
 # color_for_pct() と同じロジックで色名を返す
@@ -195,10 +204,24 @@ main() {
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
     context_tokens=$(echo "$input" | jq -r '.context_window.used // 0' 2>/dev/null)
+    context_window_size=$(echo "$input" | jq -r '.context_window.context_window_size // 0' 2>/dev/null)
 
     # トークン数が取得できない場合はパーセンテージから概算
     if [ "$context_tokens" -le 0 ] 2>/dev/null && [ "$context_pct" -gt 0 ] 2>/dev/null; then
         context_tokens=$((context_pct * CONTEXT_MAX_TOKENS / 100))
+    fi
+
+    # 残りトークン数の計算（フォールバック順: size-used → size×残り% → 200000×残り%）
+    remaining_tokens=0
+    if [ "$context_pct" -gt 0 ] 2>/dev/null; then
+        if [ "$context_window_size" -gt 0 ] 2>/dev/null && [ "$context_tokens" -gt 0 ] 2>/dev/null; then
+            remaining_tokens=$((context_window_size - context_tokens))
+        elif [ "$context_window_size" -gt 0 ] 2>/dev/null; then
+            remaining_tokens=$((context_window_size * (100 - context_pct) / 100))
+        else
+            remaining_tokens=$((CONTEXT_MAX_TOKENS * (100 - context_pct) / 100))
+        fi
+        [ "$remaining_tokens" -lt 0 ] && remaining_tokens=0
     fi
 
     # Git情報
@@ -233,29 +256,29 @@ main() {
     # === 1行目: モデル名 + コンテキスト + Usage ===
     line1=$(printf '%s%s %s%s' "$COLOR_ORANGE" "$ICON_TERMINAL" "$model_display" "$COLOR_DEFAULT")
 
-    # コンテキスト使用率表示
+    # コンテキスト表示の準備（バーは後でbunバッチ呼び出し後に追加）
+    ctx_bar=""
+    ctx_color_nm=""
+    remaining_display=""
     if [ "$context_pct" -gt 0 ] 2>/dev/null; then
-        token_display=""
-        if [ "$context_tokens" -gt 0 ] 2>/dev/null; then
-            if [ "$context_tokens" -ge 1000000 ]; then
-                token_display=$(echo "$context_tokens" | awk '{printf "%.1fM", $1/1000000}')
-            elif [ "$context_tokens" -ge 1000 ]; then
-                token_display=$(echo "$context_tokens" | awk '{printf "%.1fK", $1/1000}')
+        # 残りトークン数のフォーマット
+        if [ "$remaining_tokens" -gt 0 ] 2>/dev/null; then
+            if [ "$remaining_tokens" -ge 1000000 ]; then
+                remaining_display=$(echo "$remaining_tokens" | awk '{printf "%.1fM", $1/1000000}')
+            elif [ "$remaining_tokens" -ge 1000 ]; then
+                remaining_display=$(echo "$remaining_tokens" | awk '{printf "%.1fK", $1/1000}')
             else
-                token_display="$context_tokens"
+                remaining_display="$remaining_tokens"
             fi
         fi
-
         ctx_color=$(get_context_color "$context_pct")
-        if [ -n "$token_display" ]; then
-            line1="${line1}  ${ctx_color}${ICON_CONTEXT} ${token_display}(${context_pct}%)${COLOR_DEFAULT}"
-        else
-            line1="${line1}  ${ctx_color}${ICON_CONTEXT} ${context_pct}%${COLOR_DEFAULT}"
-        fi
+        ctx_color_nm=$(context_color_name "$context_pct")
     fi
 
-    # Usage APIデータ取得・表示
+    # Usage APIデータ取得
     usage_data=$(get_usage_data)
+    five_valid=false; seven_valid=false
+    five_bar=""; seven_bar=""
     if [ -n "$usage_data" ]; then
         # データ抽出
         five_hr_pct=$(echo "$usage_data" | jq -r '.five_hour.utilization // 0' 2>/dev/null | awk '{printf "%d", $1}')
@@ -264,7 +287,7 @@ main() {
         seven_day_reset=$(echo "$usage_data" | jq -r '.seven_day.resets_at // empty' 2>/dev/null)
 
         # 各枠の計算（色・ターゲット・リセット時刻）
-        five_valid=false five_target="" five_color="" five_color_name="" five_reset_str="" five_bar=""
+        five_target="" five_color="" five_color_name="" five_reset_str=""
         if [ -n "$five_hr_pct" ] && [ "$five_hr_pct" != "null" ]; then
             five_valid=true
             five_target=$(calc_pacing_target "$five_hr_reset" 18000)
@@ -275,7 +298,7 @@ main() {
             fi
         fi
 
-        seven_valid=false seven_target="" seven_color="" seven_color_name="" seven_reset_str="" seven_bar=""
+        seven_target="" seven_color="" seven_color_name="" seven_reset_str=""
         if [ -n "$seven_day_pct" ] && [ "$seven_day_pct" != "null" ]; then
             seven_valid=true
             seven_target=$(calc_pacing_target "$seven_day_reset" 604800)
@@ -285,43 +308,63 @@ main() {
                 seven_reset_str=$(format_remaining "$seven_day_reset")
             fi
         fi
+    fi
 
-        # バーを1回の bun 呼び出しでまとめて描画
-        bar_args=()
-        if $five_valid; then
-            bar_args+=("$five_hr_pct" "10" "${five_target:--1}" "$five_color_name")
-        fi
-        if $seven_valid; then
-            $five_valid && bar_args+=("--")
-            bar_args+=("$seven_day_pct" "10" "${seven_target:--1}" "$seven_color_name")
-        fi
+    # バーを1回のbun呼び出しでまとめて描画（コンテキスト + Usage）
+    bar_args=()
+    ctx_bar_requested=false
+    if [ -n "$ctx_color_nm" ]; then
+        ctx_bar_requested=true
+        bar_args+=("$context_pct" "10" "-1" "$ctx_color_nm")
+    fi
+    if $five_valid; then
+        $ctx_bar_requested && bar_args+=("--")
+        bar_args+=("$five_hr_pct" "10" "${five_target:--1}" "$five_color_name")
+    fi
+    if $seven_valid; then
+        { $ctx_bar_requested || $five_valid; } && bar_args+=("--")
+        bar_args+=("$seven_day_pct" "10" "${seven_target:--1}" "$seven_color_name")
+    fi
 
-        if [ ${#bar_args[@]} -gt 0 ]; then
-            bar_output=$(bun run "$BAR_RENDERER" "${bar_args[@]}" 2>/dev/null)
-            if $five_valid && $seven_valid; then
-                five_bar="${bar_output%%$'\n'*}"
-                seven_bar="${bar_output#*$'\n'}"
-            elif $five_valid; then
-                five_bar="$bar_output"
+    if [ ${#bar_args[@]} -gt 0 ]; then
+        bar_output=$(bun run "$BAR_RENDERER" "${bar_args[@]}" 2>/dev/null)
+        _rest="$bar_output"
+        if $ctx_bar_requested; then ctx_bar="${_rest%%$'\n'*}"; _rest="${_rest#*$'\n'}"; fi
+        if $five_valid; then five_bar="${_rest%%$'\n'*}"; _rest="${_rest#*$'\n'}"; fi
+        if $seven_valid; then seven_bar="${_rest%%$'\n'*}"; fi
+    fi
+
+    # コンテキスト → line1
+    if [ "$context_pct" -gt 0 ] 2>/dev/null; then
+        if [ -n "$ctx_bar" ]; then
+            if [ -n "$remaining_display" ]; then
+                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar} ${ctx_color}${remaining_display}${COLOR_DEFAULT}"
             else
-                seven_bar="$bar_output"
+                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar}"
+            fi
+        else
+            # bunが利用不可の場合のフォールバック
+            if [ -n "$remaining_display" ]; then
+                line1="${line1}  ${ctx_color}${context_pct}% ${remaining_display}${COLOR_DEFAULT}"
+            else
+                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT}"
             fi
         fi
+    fi
 
-        # line1 に追加
-        if $five_valid; then
-            if [ -n "$five_reset_str" ]; then
-                line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
-            else
-                line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
-            fi
+    # Usage 5hr/7day → line1
+    if $five_valid; then
+        if [ -n "$five_reset_str" ]; then
+            line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
+        else
+            line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
         fi
-        if $seven_valid; then
-            if [ -n "$seven_reset_str" ]; then
-                line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
-            else
-                line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
-            fi
+    fi
+    if $seven_valid; then
+        if [ -n "$seven_reset_str" ]; then
+            line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
+        else
+            line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
         fi
     fi
 
