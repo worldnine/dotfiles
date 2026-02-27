@@ -28,23 +28,24 @@ const EIGHTH_BLOCKS = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
 const SUB_PER_CELL = 8;
 
 type ColorName = "default" | "orange" | "red";
-type RGB = [number, number, number];
 
-// バーのフィル色（背景色として使用、暗めに調整）
-const FILLED: Record<ColorName, RGB> = {
-  default: [100, 110, 135],
-  orange: [180, 100, 0],
-  red: [180, 60, 60],
+// 256色パレット（24bit RGB は Claude Code statusline 未サポートのため）
+// xterm-256 色番号: 16 + 36*r + 6*g + b (r,g,b ∈ 0-5 → 0,95,135,175,215,255)
+// グレースケール: 232-255 → 8,18,...,238
+const FILLED: Record<ColorName, number> = {
+  default: 60,  // (95,95,135) - 落ち着いたブルーパープル
+  orange: 130,  // (175,95,0) - 暖色系アンバー
+  red: 131,     // (175,95,95) - 暖色系レッド
 };
 
-// 空セルの背景色（暗いブルーグレー）
-const EMPTY: RGB = [50, 50, 65];
+// 空セルの背景色（暗いグレー）
+const EMPTY = 236; // グレースケール (48,48,48)
 
-// ペーシングマーカーの前景色（ANSI 174 相当の淡ピンク）
-const MARKER: RGB = [215, 135, 135];
+// ペーシングマーカーの前景色（既存コードで動作確認済み）
+const MARKER = 174; // (215,135,135) 淡ピンク
 
-const bg = (r: number, g: number, b: number) => `\x1b[48;2;${r};${g};${b}m`;
-const fg = (r: number, g: number, b: number) => `\x1b[38;2;${r};${g};${b}m`;
+const bg256 = (n: number) => `\x1b[48;5;${n}m`;
+const fg256 = (n: number) => `\x1b[38;5;${n}m`;
 const RST = "\x1b[0m";
 
 interface BarSpec {
@@ -81,16 +82,16 @@ function render(s: BarSpec): string {
       const isFilled =
         i < fullCells || (i === fullCells && partial >= SUB_PER_CELL / 2);
       const cbg = isFilled ? fill : EMPTY;
-      out += bg(...cbg) + fg(...MARKER) + "│" + RST;
+      out += bg256(cbg) + fg256(MARKER) + "│" + RST;
     } else if (i < fullCells) {
       // 完全にフィルされたセル: スペース + バー色BG
-      out += bg(...fill) + " " + RST;
+      out += bg256(fill) + " " + RST;
     } else if (i === fullCells && partial > 0) {
       // 遷移セル: eighth-block + FG=バー色 / BG=空色
-      out += bg(...EMPTY) + fg(...fill) + EIGHTH_BLOCKS[partial - 1] + RST;
+      out += bg256(EMPTY) + fg256(fill) + EIGHTH_BLOCKS[partial - 1] + RST;
     } else {
       // 空セル: スペース + 暗いBG
-      out += bg(...EMPTY) + " " + RST;
+      out += bg256(EMPTY) + " " + RST;
     }
   }
   return out;
