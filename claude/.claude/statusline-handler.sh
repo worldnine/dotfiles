@@ -6,7 +6,7 @@
 # コンテキスト使用率をリアルタイムで statusline に表示
 #
 # 表示レイアウト:
-# 1行目: * Opus 4.6  29% ██▉░░░░░░░ 142.2K  58% ███▍│░░░░░ 6pm  5% ▎│░░░░░░░░░ 3/8
+# 1行目: * Opus 4.6   29% ██▉░░░░░░░ 142.2K   58% ███▍│░░░░░ 6pm   5% ▎│░░░░░░░░░ 3/8
 # （バーは背景色+eighth-block遷移セルで80段階の高解像度表示、bun依存）
 # 2行目: [WT] project-name on git main +10 -5
 #
@@ -36,6 +36,9 @@ BAR_RENDERER="$HOME/.claude/bar-renderer.ts"  # 高解像度バーレンダラ�
 setup_icons() {
     ICON_TERMINAL="*"
     ICON_TREE="[WT]"
+    ICON_CONTEXT=$'\xef\x80\xad'   # U+F02D nf-fa-book (本)
+    ICON_5HR=$'\xef\x80\x97'       # U+F017 nf-fa-clock_o (時計)
+    ICON_7DAY=$'\xef\x81\xb3'      # U+F073 nf-fa-calendar (カレンダー)
 }
 
 # カラー設定
@@ -338,16 +341,16 @@ main() {
     if [ "$context_pct" -gt 0 ] 2>/dev/null; then
         if [ -n "$ctx_bar" ]; then
             if [ -n "$remaining_display" ]; then
-                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar} ${ctx_color}${remaining_display}${COLOR_DEFAULT}"
+                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar} ${ctx_color}${remaining_display}${COLOR_DEFAULT}"
             else
-                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar}"
+                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar}"
             fi
         else
             # bunが利用不可の場合のフォールバック
             if [ -n "$remaining_display" ]; then
-                line1="${line1}  ${ctx_color}${context_pct}% ${remaining_display}${COLOR_DEFAULT}"
+                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}% ${remaining_display}${COLOR_DEFAULT}"
             else
-                line1="${line1}  ${ctx_color}${context_pct}%${COLOR_DEFAULT}"
+                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT}"
             fi
         fi
     fi
@@ -355,16 +358,16 @@ main() {
     # Usage 5hr/7day → line1
     if $five_valid; then
         if [ -n "$five_reset_str" ]; then
-            line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
+            line1="${line1}  ${ICON_5HR}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
         else
-            line1="${line1}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
+            line1="${line1}  ${ICON_5HR}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
         fi
     fi
     if $seven_valid; then
         if [ -n "$seven_reset_str" ]; then
-            line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
+            line1="${line1}  ${ICON_7DAY}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
         else
-            line1="${line1}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
+            line1="${line1}  ${ICON_7DAY}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
         fi
     fi
 
