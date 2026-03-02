@@ -35,9 +35,12 @@ BAR_RENDERER="$HOME/.claude/bar-renderer.ts"  # 高解像度バーレンダラ�
 # アイコン設定
 setup_icons() {
     ICON_TERMINAL="*"
-    ICON_TREE="[WT]"
+    ICON_FOLDER=$'\xef\x81\xbb'    # U+F07B nf-fa-folder (フォルダ)
+    ICON_GIT=$'\xee\x9c\xa5'       # U+E725 nf-dev-git (git)
+    ICON_TAG=$'\xef\x80\xab'       # U+F02B nf-fa-tag (ブランチ)
+    ICON_LEAF=$'\xef\x81\xac'      # U+F06C nf-fa-leaf (ワークツリー)
     ICON_CONTEXT=$'\xef\x80\xad'   # U+F02D nf-fa-book (本)
-    ICON_5HR=$'\xef\x80\x97'       # U+F017 nf-fa-clock_o (時計)
+    ICON_5HR=$'\xf3\xb1\x91\x83'   # U+F1443 nf-md-clock_time_five (5時の時計)
     ICON_7DAY=$'\xef\x81\xb3'      # U+F073 nf-fa-calendar (カレンダー)
 }
 
@@ -55,11 +58,11 @@ setup_colors() {
     else
         COLOR_RESET=$'\033[0m'
         COLOR_DEFAULT=$'\033[39m'  # 前景色のみデフォルトに戻す（statusline環境用）
-        COLOR_BLUE=$'\033[34m'
-        COLOR_PINK=$'\033[95m'
-        COLOR_GREEN=$'\033[92m'
-        COLOR_RED=$'\033[91m'
-        COLOR_BRIGHT_GREEN=$'\033[32m'
+        COLOR_BLUE=$'\033[38;5;68m'
+        COLOR_PINK=$'\033[38;5;168m'
+        COLOR_GREEN=$'\033[38;5;71m'
+        COLOR_RED=$'\033[38;5;167m'
+        COLOR_BRIGHT_GREEN=$'\033[38;5;71m'
         COLOR_ORANGE=$'\033[38;5;208m'
     fi
 }
@@ -234,12 +237,12 @@ main() {
     fi
 
     # Worktree検出
-    is_worktree=""
+    is_worktree=false
     if [ -n "$branch" ] && [ -n "$cwd" ]; then
-        git_common_dir=$(cd "$cwd" 2>/dev/null && git rev-parse --git-common-dir 2>/dev/null)
-        git_dir=$(cd "$cwd" 2>/dev/null && git rev-parse --git-dir 2>/dev/null)
+        git_common_dir=$(cd "$cwd" 2>/dev/null && cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)
+        git_dir=$(cd "$cwd" 2>/dev/null && cd "$(git rev-parse --git-dir 2>/dev/null)" 2>/dev/null && pwd)
         if [ -n "$git_common_dir" ] && [ -n "$git_dir" ] && [ "$git_common_dir" != "$git_dir" ]; then
-            is_worktree="$ICON_TREE"
+            is_worktree=true
         fi
     fi
 
@@ -341,16 +344,16 @@ main() {
     if [ "$context_pct" -gt 0 ] 2>/dev/null; then
         if [ -n "$ctx_bar" ]; then
             if [ -n "$remaining_display" ]; then
-                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar} ${ctx_color}${remaining_display}${COLOR_DEFAULT}"
+                line1="${line1}  ${ctx_color}${ICON_CONTEXT}  ${context_pct}%${COLOR_DEFAULT} ${ctx_bar} ${ctx_color}${remaining_display}${COLOR_DEFAULT}"
             else
-                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT} ${ctx_bar}"
+                line1="${line1}  ${ctx_color}${ICON_CONTEXT}  ${context_pct}%${COLOR_DEFAULT} ${ctx_bar}"
             fi
         else
             # bunが利用不可の場合のフォールバック
             if [ -n "$remaining_display" ]; then
-                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}% ${remaining_display}${COLOR_DEFAULT}"
+                line1="${line1}  ${ctx_color}${ICON_CONTEXT}  ${context_pct}% ${remaining_display}${COLOR_DEFAULT}"
             else
-                line1="${line1}  ${ICON_CONTEXT}  ${ctx_color}${context_pct}%${COLOR_DEFAULT}"
+                line1="${line1}  ${ctx_color}${ICON_CONTEXT}  ${context_pct}%${COLOR_DEFAULT}"
             fi
         fi
     fi
@@ -358,33 +361,46 @@ main() {
     # Usage 5hr/7day → line1
     if $five_valid; then
         if [ -n "$five_reset_str" ]; then
-            line1="${line1}  ${ICON_5HR}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
+            line1="${line1}  ${five_color}${ICON_5HR}  ${five_hr_pct}% ${five_bar}${COLOR_DEFAULT} ${five_reset_str}"
         else
-            line1="${line1}  ${ICON_5HR}  ${five_color}${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
+            line1="${line1}  ${five_color}${ICON_5HR}  ${five_hr_pct}% ${five_bar}${COLOR_DEFAULT}"
         fi
     fi
     if $seven_valid; then
         if [ -n "$seven_reset_str" ]; then
-            line1="${line1}  ${ICON_7DAY}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
+            line1="${line1}  ${seven_color}${ICON_7DAY}  ${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT} ${seven_reset_str}"
         else
-            line1="${line1}  ${ICON_7DAY}  ${seven_color}${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
+            line1="${line1}  ${seven_color}${ICON_7DAY}  ${seven_day_pct}% ${seven_bar}${COLOR_DEFAULT}"
         fi
     fi
 
     # 1行目出力
     printf "%s\n" "$line1"
 
-    # === 2行目: Worktree + Git情報 ===
-    if [ -n "$is_worktree" ]; then
-        printf '%s%s%s ' "$COLOR_BRIGHT_GREEN" "$is_worktree" "$COLOR_DEFAULT"
-    fi
-
-    if [ -n "$branch" ] && [ -n "$project" ]; then
-        printf '%s%s%s on %sgit %s%s%s' "$COLOR_BLUE" "$project" "$COLOR_DEFAULT" "$COLOR_PINK" "$branch" "$COLOR_DEFAULT" "$git_stats"
-    elif [ -n "$branch" ]; then
-        printf '%sgit %s%s%s' "$COLOR_PINK" "$branch" "$COLOR_DEFAULT" "$git_stats"
+    # === 2行目: ディレクトリ名 + Git情報 ===
+    if [ -n "$branch" ]; then
+        # git リポジトリ内
+        local wt_indicator="" branch_color="$COLOR_PINK"
+        local branch_icon=$(printf '%s  ' "$ICON_TAG")
+        if $is_worktree; then
+            wt_indicator=$(printf '%s%s  ' "$COLOR_BRIGHT_GREEN" "$ICON_LEAF")
+            branch_color="$COLOR_BRIGHT_GREEN"
+            branch_icon=""
+        fi
+        if [ -n "$project" ]; then
+            printf '%s%s %s%s  %s%s%s%s%s%s' \
+                "$COLOR_BLUE" "$ICON_GIT" "$project" "$COLOR_DEFAULT" \
+                "$wt_indicator" "$branch_color" "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+                "$git_stats"
+        else
+            printf '%s%s%s %s%s%s%s' \
+                "$wt_indicator" "$branch_color" "$ICON_GIT" \
+                "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+                "$git_stats"
+        fi
     elif [ -n "$project" ]; then
-        printf '%s%s%s' "$COLOR_BLUE" "$project" "$COLOR_DEFAULT"
+        # 非git ディレクトリ
+        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$project" "$COLOR_DEFAULT"
     fi
 }
 
