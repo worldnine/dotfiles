@@ -8,13 +8,13 @@
 # 表示レイアウト:
 # 1行目: * Opus 4.6   29% ██▉░░░░░░░ 142.2K   58% ███▍│░░░░░ 6pm   5% ▎│░░░░░░░░░ 3/8
 # （バーは背景色+eighth-block遷移セルで80段階の高解像度表示、bun依存）
-# 2行目: [WT] project-name on git main +10 -5
+# 2行目:  my-project  main +10 -5
 #
 # 使用方法:
 # ~/.claude/settings.json に以下を設定:
 #   "statusLine": {
 #     "type": "command",
-#     "command": "cat | bash /Users/nagata/.claude/statusline-handler.sh"
+#     "command": "cat | bash ~/.claude/statusline-handler.sh"
 #   }
 #
 # テスト方法:
@@ -24,13 +24,16 @@
 #   DEBUG_STATUSLINE=1 を設定すると詳細ログが出力される
 #
 
+# スクリプト自身のディレクトリを基準にパスを解決
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # bun のパス補完（シェルプロファイルが未ロードの環境用）
 [ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"
 
 USAGE_CACHE="/tmp/claude-statusline-usage.json"
 USAGE_CACHE_TTL=60  # キャッシュ有効期間（秒）
 CONTEXT_MAX_TOKENS=200000  # コンテキスト制限の概算値（トークン数表示の概算用）
-BAR_RENDERER="$HOME/.claude/bar-renderer.ts"  # 高解像度バーレンダラー（bun実行）
+BAR_RENDERER="${SCRIPT_DIR}/bar-renderer.ts"  # 高解像度バーレンダラー（bun実行）
 
 # アイコン設定
 setup_icons() {
@@ -55,6 +58,7 @@ setup_colors() {
         COLOR_RED=""
         COLOR_BRIGHT_GREEN=""
         COLOR_ORANGE=""
+        COLOR_DIM=""
     else
         COLOR_RESET=$'\033[0m'
         COLOR_DEFAULT=$'\033[39m'  # 前景色のみデフォルトに戻す（statusline環境用）
@@ -64,7 +68,53 @@ setup_colors() {
         COLOR_RED=$'\033[38;5;167m'
         COLOR_BRIGHT_GREEN=$'\033[38;5;71m'
         COLOR_ORANGE=$'\033[38;5;208m'
+        COLOR_DIM=$'\033[38;5;242m'
     fi
+}
+
+# ディレクトリパスフォーマッター
+# HOME配下は ~/relative/path、HOME自体は ~、それ以外は絶対パス
+format_dir_path() {
+    local dir="$1"
+    [ -z "$dir" ] && return
+    case "$dir" in
+        "$HOME") printf '~' ;;
+        "$HOME"/*) printf '~/%s' "${dir#$HOME/}" ;;
+        *) printf '%s' "$dir" ;;
+    esac
+}
+
+# 親パス部分のみを返す（basename を除いた prefix）
+# 例: ~/src/claude-statusline → "~/src/"、~/project → ""、/tmp/test → "/tmp/"
+format_parent_path() {
+    local dir="$1"
+    [ -z "$dir" ] && return
+    local formatted
+    case "$dir" in
+        "$HOME") return ;;
+        "$HOME"/*) formatted="~/${dir#$HOME/}" ;;
+        *) formatted="$dir" ;;
+    esac
+    local parent="${formatted%/*}"
+    [ "$parent" = "$formatted" ] && return  # スラッシュなし = 親なし
+    printf '%s/' "$parent"
+}
+
+# パスをターミナル幅に収まるよう左側から切り詰め
+# $1: パス文字列  $2: 最大幅（省略時は切り詰めなし）
+truncate_path() {
+    local path="$1" max_width="$2"
+    [ -z "$max_width" ] || [ "$max_width" -le 0 ] 2>/dev/null && { printf '%s' "$path"; return; }
+    local len=${#path}
+    [ "$len" -le "$max_width" ] && { printf '%s' "$path"; return; }
+    # 最大幅から "…/" の2文字分を引いた長さで右側を取得
+    local keep=$((max_width - 2))
+    local suffix="${path:$((len - keep))}"
+    # / 境界に揃える
+    case "$suffix" in
+        */*) suffix="${suffix#*/}"; printf '…/%s' "$suffix" ;;
+        *) printf '…%s' "$suffix" ;;
+    esac
 }
 
 # Usage API からデータ取得
@@ -193,6 +243,9 @@ main() {
     setup_icons
     setup_colors
 
+    local term_width
+    term_width=$(tput cols 2>/dev/null || echo "80")
+
     input=$(cat)
 
     # デバッグモード
@@ -205,7 +258,9 @@ main() {
     # 入力JSONからデータ取得
     model_display=$(echo "$input" | jq -r '.model.display_name // "Unknown"' 2>/dev/null)
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
-    project=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null | xargs basename 2>/dev/null)
+    workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
+    project=$(basename "$workspace_dir" 2>/dev/null)
+    project_dir="$workspace_dir"
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
@@ -377,30 +432,35 @@ main() {
     # 1行目出力
     printf "%s\n" "$line1"
 
-    # === 2行目: ディレクトリ名 + Git情報 ===
+    # === 2行目: Git情報（git リポジトリの場合のみ） ===
     if [ -n "$branch" ]; then
-        # git リポジトリ内
-        local wt_indicator="" branch_color="$COLOR_PINK"
-        local branch_icon=$(printf '%s  ' "$ICON_TAG")
         if $is_worktree; then
-            wt_indicator=$(printf '%s%s  ' "$COLOR_BRIGHT_GREEN" "$ICON_LEAF")
-            branch_color="$COLOR_BRIGHT_GREEN"
-            branch_icon=""
-        fi
-        if [ -n "$project" ]; then
-            printf '%s%s %s%s  %s%s%s%s%s%s' \
-                "$COLOR_BLUE" "$ICON_GIT" "$project" "$COLOR_DEFAULT" \
-                "$wt_indicator" "$branch_color" "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+            # WT: GIT + BLUE(リポ名) + LEAF + GREEN(ブランチ) + stats
+            local repo_dir repo_name
+            repo_dir=$(cd "$git_common_dir/.." 2>/dev/null && pwd)
+            repo_name=$(basename "$repo_dir")
+            printf '%s%s %s%s  %s%s  %s%s%s\n' \
+                "$COLOR_BLUE" "$ICON_GIT" \
+                "$repo_name" "$COLOR_DEFAULT" \
+                "$COLOR_BRIGHT_GREEN" "$ICON_LEAF" \
+                "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         else
-            printf '%s%s%s %s%s%s%s' \
-                "$wt_indicator" "$branch_color" "$ICON_GIT" \
-                "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+            # 通常 git: GIT + BLUE(プロジェクト名) + TAG + PINK(ブランチ) + stats
+            printf '%s%s %s%s  %s%s  %s%s%s\n' \
+                "$COLOR_BLUE" "$ICON_GIT" \
+                "$project" "$COLOR_DEFAULT" \
+                "$COLOR_PINK" "$ICON_TAG" \
+                "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         fi
-    elif [ -n "$project" ]; then
-        # 非git ディレクトリ
-        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$project" "$COLOR_DEFAULT"
+    fi
+
+    # === 最終行: フルパス（DIM、フォルダアイコン付き、幅制限） ===
+    if [ -n "$project_dir" ]; then
+        local path_display
+        path_display=$(truncate_path "$(format_dir_path "$project_dir")" "$((term_width - 3))")
+        printf '%s%s  %s%s' "$COLOR_DIM" "$ICON_FOLDER" "$path_display" "$COLOR_DEFAULT"
     fi
 }
 
