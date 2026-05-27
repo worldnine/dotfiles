@@ -43,5 +43,5 @@ if command -v gwq &>/dev/null; then
   alias gw='gwq cd'    # worktree に cd (fzf統合は gwq 純正)
   alias gwa='gwq add'  # worktree 作成
   alias gwl='gwq list' # 一覧
-  alias gws='gwq status' # ステータスダッシュボード
+  alias gwst='gwq status' # ステータスダッシュボード（gws は Google Workspace CLI と衝突するため gwst）
 fi
