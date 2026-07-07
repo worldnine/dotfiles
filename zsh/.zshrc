@@ -1,5 +1,3 @@
-# Kiro CLI pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
 # Amazon Q pre block. Keep at the top of this file.
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
 # [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
@@ -47,12 +45,17 @@ if [ -f "$HOME/.env" ]; then
   set +a
 fi
 
-# bun completions
-[ -s "/Users/nagata/.bun/_bun" ] && source "/Users/nagata/.bun/_bun"
+# zsh補完: bunや他のcompdef呼び出しより前にcompinitを初期化。
+# キャッシュ(.zcompdump)が24時間以内なら-Cでセキュリティ監査をスキップして高速起動。
+autoload -Uz compinit
+if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C
+fi
 
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
+# bun completions（PATH設定は.zshenvに移動済み）
+[ -s "/Users/nagata/.bun/_bun" ] && source "/Users/nagata/.bun/_bun"
 
 # avr-gcc@8: 存在しないパスのためコメントアウト
 # export PATH="/usr/local/opt/avr-gcc@8/bin:$PATH"
@@ -109,11 +112,21 @@ if [[ "$TERM_PROGRAM" == "vscode" ]]; then
   fi
 fi
 
-export EDITOR="/usr/local/bin/code --wait"
-export VISUAL="/usr/local/bin/code --wait"
+# デフォルトエディタ（herdr サーバー含むすべてのプロセスで使われる）
+export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
+export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
+
+# herdr 内では TUI エディタを使う（prefix+e でのスクロールバック表示用）
+# -> デフォルトを nvim-minimal にしたのでこの分岐は不要。コードは残しておく
+if [[ -n "$HERDR_ENV" ]]; then
+  export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
+  export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
+else
+  export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
+  export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
+fi
 
 
-[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
 
 # fzf: 非TTY環境でのzleエラーを抑制
 if [[ -o interactive ]]; then
@@ -121,7 +134,7 @@ if [[ -o interactive ]]; then
 fi
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
-eval "$(ruby ~/.local/try.rb init ~/src/tries)"
+eval "$(/Users/nagata/.local/share/mise/shims/ruby ~/.local/try.rb init ~/src/tries | sed 's|/usr/bin/env ruby|/Users/nagata/.local/share/mise/shims/ruby|g')"
 
 # Amazon Q post block. Keep at the bottom of this file.
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
@@ -133,5 +146,11 @@ eval "$(ruby ~/.local/try.rb init ~/src/tries)"
 # Added by Antigravity
 export PATH="/Users/nagata/.antigravity/antigravity/bin:$PATH"
 
-# Kiro CLI post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
+# OpenCode Go API for Pi & LLM tools
+export OPENAI_BASE_URL=https://opencode.ai/zen/go/v1
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<
