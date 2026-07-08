@@ -129,7 +129,22 @@ vim.treesitter.query.set('markdown', 'injections', [[
 ]])
 
 -- ── lazy.nvim ブートストラップ ──
-local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
+-- NVIM_APPNAME=nvim-minimal を付け忘れて `nvim -u .../init.lua` のように
+-- -u だけで起動された場合（実際に herdr の古いペインが握っていた stale な
+-- EDITOR 文字列で発生した）、stdpath('data')/stdpath('config') が本体の
+-- nvim と同じ場所になってしまい、本体 LazyVim の lua/plugins/*.lua
+-- （nvim-lint 等）を誤って巻き込んで壊れる事故が起きた。
+-- そのため stdpath() に頼らず、このファイル自身の場所を自己特定して
+-- プラグイン一覧の読み込み元とデータ領域を明示的に固定する。
+local this_dir = vim.fn.fnamemodify((debug.getinfo(1, 'S').source):sub(2), ':h')
+
+local data_dir = vim.fn.stdpath('data')
+if vim.fn.fnamemodify(data_dir, ':t') ~= 'nvim-minimal' then
+  -- NVIM_APPNAME が効いていない(本体と同じ data dir になっている)場合の保険
+  data_dir = data_dir:gsub('/nvim$', '/nvim-minimal')
+end
+
+local lazypath = data_dir .. '/lazy/lazy.nvim'
 if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     'git', 'clone', '--filter=blob:none',
@@ -140,8 +155,17 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-require('lazy').setup('plugins', {
-  root = vim.fn.stdpath('data') .. '/lazy',
+-- runtimepath 経由の 'plugins' インポートだと、本体 nvim の lua/plugins が
+-- rtp に残っている場合に二重に読み込まれてしまうため、このディレクトリの
+-- lua/plugins/*.lua を直接 dofile して spec を組み立てる（rtp に依存しない）
+local plugin_specs = {}
+for _, f in ipairs(vim.fn.glob(this_dir .. '/lua/plugins/*.lua', false, true)) do
+  table.insert(plugin_specs, dofile(f))
+end
+
+require('lazy').setup(plugin_specs, {
+  root = data_dir .. '/lazy',
+  lockfile = this_dir .. '/lazy-lock.json',
   checker = { enabled = false },
   change_detection = { notify = false },
 })
