@@ -113,18 +113,11 @@ if [[ "$TERM_PROGRAM" == "vscode" ]]; then
 fi
 
 # デフォルトエディタ（herdr サーバー含むすべてのプロセスで使われる）
-export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
-export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
-
-# herdr 内では TUI エディタを使う（prefix+e でのスクロールバック表示用）
-# -> デフォルトを nvim-minimal にしたのでこの分岐は不要。コードは残しておく
-if [[ -n "$HERDR_ENV" ]]; then
-  export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
-  export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
-else
-  export EDITOR="nvim -u ~/.config/nvim-minimal/init.lua"
-  export VISUAL="nvim -u ~/.config/nvim-minimal/init.lua"
-fi
+# NVIM_APPNAME で切り替えることで、素の `nvim` コマンド（本体の LazyVim）とは
+# 設定・プラグイン・lazy-lock を完全に分離する（`-u` だと stdpath('data') が
+# 本体と共有されてしまい、lazy.nvim 導入時に競合するため env prefix 方式にした）
+export EDITOR="env NVIM_APPNAME=nvim-minimal nvim"
+export VISUAL="env NVIM_APPNAME=nvim-minimal nvim"
 
 
 
