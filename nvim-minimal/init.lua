@@ -17,6 +17,13 @@
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- 本体 LazyVim の mason でインストール済みのフォーマッタ(stylua/shfmt/prettier等)を
+-- 再利用する。nvim-minimal自体にmason.nvimは入れず軽量に保つための措置。
+local mason_bin = vim.fn.expand('~/.local/share/nvim/mason/bin')
+if vim.fn.isdirectory(mason_bin) == 1 then
+  vim.env.PATH = mason_bin .. ':' .. vim.env.PATH
+end
+
 -- ── 表示 ──
 vim.opt.number = true
 vim.opt.relativenumber = true
