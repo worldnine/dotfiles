@@ -13,6 +13,7 @@ return {
       },
     })
     vim.lsp.enable('lua_ls')
+    vim.lsp.enable('marksman')
 
     vim.api.nvim_create_autocmd('LspAttach', {
       callback = function(args)
