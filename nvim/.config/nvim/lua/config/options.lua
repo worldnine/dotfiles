@@ -1,4 +1,6 @@
--- Options are automatically loaded before lazy.nvim startup
--- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
--- Add any additional options here
+-- spell check を完全に無効化（日本語に赤い波線が出るのを防ぐ）
 vim.opt.spell = false
+
+-- 行番号
+vim.opt.number = true
+vim.opt.relativenumber = true
