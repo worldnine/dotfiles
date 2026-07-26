@@ -1,17 +1,14 @@
 return {
-  -- TokyoNightの背景を透過
   {
-    "folke/tokyonight.nvim",
+    "scottmckendry/cyberdream.nvim",
+    name = "cyberdream",
+    priority = 1000,
+    opts = { transparent = true },
+  },
+  {
+    "LazyVim/LazyVim",
     opts = {
-      transparent = true,
-      styles = {
-        sidebars = "transparent",
-        floats = "transparent",
-      },
+      colorscheme = "cyberdream",
     },
   },
-
-  -- 追加テーマ（必要なら）
-  -- { "catppuccin/nvim", name = "catppuccin" },
-  -- { "rebelot/kanagawa.nvim" },
 }
