@@ -112,12 +112,17 @@ if [[ "$TERM_PROGRAM" == "vscode" ]]; then
   fi
 fi
 
-# デフォルトエディタ（herdr サーバー含むすべてのプロセスで使われる）
+# デフォルトエディタ（herdr サーバー含むすべてのプロセスで使われる）。Zed を使う。
+# --wait がないと呼び出し元が即終了扱いになり、herdr のスクロールバック編集などで
+# 一時ファイルがエディタ起動前に削除されてしまう。
+export EDITOR="zed --wait"
+export VISUAL="zed --wait"
+
+# 軽量な nvim-minimal プロファイルを明示的に使いたいときの別名
 # NVIM_APPNAME で切り替えることで、素の `nvim` コマンド（本体の LazyVim）とは
 # 設定・プラグイン・lazy-lock を完全に分離する（`-u` だと stdpath('data') が
 # 本体と共有されてしまい、lazy.nvim 導入時に競合するため env prefix 方式にした）
-export EDITOR="env NVIM_APPNAME=nvim-minimal nvim"
-export VISUAL="env NVIM_APPNAME=nvim-minimal nvim"
+alias nvmin="env NVIM_APPNAME=nvim-minimal nvim"
 
 
 
@@ -147,3 +152,6 @@ export PATH="$HOME/.grok/bin:$PATH"
 fpath=(~/.grok/completions/zsh $fpath)
 autoload -Uz compinit && compinit -C
 # <<< grok installer <<<
+
+# opencode
+export PATH=/Users/nagata/.opencode/bin:$PATH

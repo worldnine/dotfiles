@@ -1,5 +1,3 @@
-# Kiro CLI pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zprofile.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zprofile.pre.zsh"
 # Amazon Q pre block. Keep at the top of this file.
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
 # [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zprofile.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zprofile.pre.zsh"
@@ -19,9 +17,8 @@ export PATH=/Applications/MAMP/bin/php/php8.1.31/bin:$PATH
 # Add support for MYSQL
 export PATH=/Applications/MAMP/Library/bin:$PATH
 
+# mise shims は .zshenv で設定済み（全シェルタイプで有効にするため）
+
 # Amazon Q post block. Keep at the bottom of this file.
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
 # [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zprofile.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zprofile.post.zsh"
-
-# Kiro CLI post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zprofile.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zprofile.post.zsh"
