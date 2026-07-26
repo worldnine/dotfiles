@@ -1,3 +1,5 @@
+command_timeout = 1000
+
 [character]
 success_symbol = "[>](bold green)"
 error_symbol = "[x](bold red)"
@@ -21,6 +23,7 @@ symbol = "az "
 
 [bun]
 symbol = "bun "
+detect_files = ["bun.lockb", "bunfig.toml", ".bun-version"]
 
 [c]
 symbol = "C "
@@ -68,6 +71,7 @@ symbol = "fnl "
 symbol = "fossil "
 
 [gcloud]
+disabled = true
 symbol = "gcp "
 
 [git_branch]
@@ -102,6 +106,10 @@ symbol = "lua "
 
 [nodejs]
 symbol = "nodejs "
+# 明示的にNode.jsを選択したプロジェクトのみ表示（Bun/Denoとの誤検出を防ぐ）
+detect_files = [".node-version", ".nvmrc"]
+detect_folders = []
+detect_extensions = []
 
 [memory_usage]
 symbol = "memory "
