@@ -1,0 +1,9 @@
+# 手動管理のGhostty設定。
+# ~/Library/Application Support/com.mitchellh.ghostty/config は
+# GUIツール(Ghostly Config)が再生成して手動編集が消えるため、
+# ツールに触られたくない設定はこちらに置く(Ghosttyは両方のconfigを読み込む)。
+
+# AI/LLMプロバイダのロゴグリフ（Claude/OpenAI/opencode等、plane 15）
+# https://github.com/hschne/lobe-icons-font
+font-codepoint-map = U+F4000-U+F47FF=lobe-icons
+theme = cyberdream
