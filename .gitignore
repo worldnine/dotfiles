@@ -8,6 +8,9 @@ tmux/.tmux/plugins/
 nvim/.config/nvim/plugin/
 nvim/.config/nvim/.luarc.json
 
+# Neovim 設定の日付付きバックアップ（移行時に手元で作るもの。現行設定は git 側が正）
+nvim/.config/nvim.bak.*/
+
 # シェル履歴
 zsh/.zsh_history
 
