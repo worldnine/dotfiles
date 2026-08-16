@@ -65,6 +65,26 @@ install_gemini() {
     fi
 }
 
+# skills: 各エージェントのスキルディレクトリへ配布（正本は dotfiles/skills/）
+install_skills() {
+    echo "  skills をセットアップ中..."
+    # pi / Claude Code はシンボリックリンクで正本を参照
+    mkdir -p "$HOME/.pi/agent/skills"
+    ln -sfn "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.pi/agent/skills/textlint-ja"
+    mkdir -p "$HOME/.claude/skills"
+    ln -sfn "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.claude/skills/textlint-ja"
+    # Codex はシンボリックリンク非対応のためコピー
+    mkdir -p "$HOME/.codex/skills"
+    rm -rf "$HOME/.codex/skills/textlint-ja"
+    cp -R "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.codex/skills/textlint-ja"
+}
+
+# textlint: グローバル設定（textlint 本体とルールは npm install -g で別途）
+install_textlint() {
+    echo "  textlint をセットアップ中..."
+    ln -sfn "$DOTFILES_DIR/textlint/.textlintrc" "$HOME/.textlintrc"
+}
+
 # 全パッケージをインストール
 echo "dotfiles をインストールしています..."
 for pkg in "${PACKAGES[@]}"; do
@@ -77,6 +97,10 @@ done
 # codex/gemini は個別にセットアップ
 install_codex
 install_gemini
+
+# スキル配布と textlint 設定
+install_skills
+install_textlint
 
 # oh-my-tmux のインストール
 if [ ! -d "$HOME/.config/tmux/oh-my-tmux" ]; then
