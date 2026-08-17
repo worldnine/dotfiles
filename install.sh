@@ -68,15 +68,21 @@ install_gemini() {
 # skills: 各エージェントのスキルディレクトリへ配布（正本は dotfiles/skills/）
 install_skills() {
     echo "  skills をセットアップ中..."
+    # dotfiles/skills/ 以下の全スキルを配布
     # pi / Claude Code はシンボリックリンクで正本を参照
-    mkdir -p "$HOME/.pi/agent/skills"
-    ln -sfn "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.pi/agent/skills/textlint-ja"
-    mkdir -p "$HOME/.claude/skills"
-    ln -sfn "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.claude/skills/textlint-ja"
     # Codex はシンボリックリンク非対応のためコピー
-    mkdir -p "$HOME/.codex/skills"
-    rm -rf "$HOME/.codex/skills/textlint-ja"
-    cp -R "$DOTFILES_DIR/skills/textlint-ja" "$HOME/.codex/skills/textlint-ja"
+    for skill in "$DOTFILES_DIR"/skills/*/; do
+        [ -d "$skill" ] || continue
+        name="$(basename "$skill")"
+        mkdir -p "$HOME/.pi/agent/skills"
+        ln -sfn "$skill" "$HOME/.pi/agent/skills/$name"
+        mkdir -p "$HOME/.claude/skills"
+        ln -sfn "$skill" "$HOME/.claude/skills/$name"
+        mkdir -p "$HOME/.codex/skills"
+        rm -rf "$HOME/.codex/skills/$name"
+        cp -R "$skill" "$HOME/.codex/skills/$name"
+        echo "    $name を配布しました"
+    done
 }
 
 # textlint: グローバル設定（textlint 本体とルールは npm install -g で別途）
