@@ -1,8 +1,14 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "PATH": "/Users/nagata/.local/bin:/Users/nagata/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  },
   "permissions": {
     "allow": [
-      "Edit(**)",
-      "Write(**)",
+      "Edit(/Users/nagata/src/**)",
+      "Edit(/Users/nagata/work/**)",
+      "Edit(/tmp/**)",
+      "Edit(/Users/nagata/.claude/**)",
       "Read(**)",
       "Bash(npm:*)",
       "Bash(npx:*)",
@@ -20,12 +26,9 @@
       "Bash(docker:*)",
       "Bash(brew:*)",
       "Bash(stow:*)",
-      "Bash(curl:*)",
-      "Bash(chmod:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
       "Bash(mv:*)",
-      "Bash(rm:*)",
       "Bash(ln:*)",
       "Bash(touch:*)",
       "Bash(ls:*)",
@@ -33,19 +36,32 @@
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(which:*)",
-      "Bash(bash:*)",
-      "Bash(sh:*)",
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(diff:*)",
       "Bash(wc:*)",
-      "mcp__pencil"
+      "Read(//Users/nagata/work/claude-skills/tao-business/**)",
+      "Read(//Users/nagata/work/claude-skills/tao-translation/**)",
+      "Read(//Users/nagata/work/jira-dashboard/**)",
+      "WebFetch(domain:saltire.lti.app)",
+      "mcp__claude_ai_Microsoft_365__read_resource",
+      "mcp__claude_ai_Slack__slack_read_thread",
+      "WebFetch(domain:ltidevkit.ngdle.io)",
+      "mcp__claude_ai_Slack__slack_read_channel",
+      "mcp__pencil",
+      "mcp__claude_ai_Gmail__search_threads",
+      "mcp__claude_ai_Gmail__get_thread",
+      "mcp__claude_ai_Atlassian__getJiraIssue",
+      "mcp__claude_ai_Atlassian__getAccessibleAtlassianResources",
+      "mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql",
+      "mcp__claude_ai_Google_Drive__search_files"
     ],
-    "deny": [
-      "Bash(npm publish:*)"
-    ],
-    "defaultMode": "default"
+    "deny": [],
+    "defaultMode": "auto",
+    "additionalDirectories": [
+      "/Users/nagata/src/tries/2026-02-25-medic-media-enterprise/docs"
+    ]
   },
   "hooks": {
     "Notification": [
@@ -55,6 +71,18 @@
           {
             "type": "command",
             "command": "cat | bash ~/.claude/notification-handler.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/nagata/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
           }
         ]
       }
@@ -75,10 +103,44 @@
     "type": "command",
     "command": "bash ~/.claude/statusline-handler.sh"
   },
-  "env": {
-    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true,
+    "codex@openai-codex": true,
+    "swift-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "apple-hig-skills-dev": {
+      "source": {
+        "source": "github",
+        "repo": "0xKoru/apple-hig-codex-skills"
+      }
+    },
+    "infosign-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "infosign/claude-plugins"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      },
+      "autoUpdate": true
+    }
   },
   "language": "日本語",
-  "alwaysThinkingEnabled": true
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
+  "autoCompactEnabled": false,
+  "teammateMode": "in-process",
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true
 }

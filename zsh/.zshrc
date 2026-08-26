@@ -45,8 +45,50 @@ if [ -f "$HOME/.env" ]; then
   set +a
 fi
 
+# herdr: pane を他タブへ移動 (fzf で pane → タブの順に選択)
+# - ~/.env の変数には依存しない。HERDR_* は herdr が pane ごとに注入するものを使う
+# - herdr pane の外では no-op
+# - 引数で pane_id を渡すと pane 選択をスキップ
+# - タブ選択で「+ new tab」を選ぶと新規タブを作って移動
+mvp() {
+  [[ "${HERDR_ENV:-}" != "1" ]] && { echo "mvp: not in herdr" >&2; return 1; }
+  local pane="$1" choice tab label
+  if [[ "$pane" == "-n" ]]; then
+    # mvp -n [label]: 今いる pane を新規タブへ即移動
+    label="$2"
+    pane="$(herdr pane current --current | jq -r .result.pane.pane_id)"
+    if [[ -n "$label" ]]; then
+      herdr pane move "$pane" --new-tab --label "$label"
+    else
+      herdr pane move "$pane" --new-tab
+    fi
+    return
+  fi
+  if [[ -z "$pane" ]]; then
+    pane="$(herdr pane list --workspace "$HERDR_WORKSPACE_ID" | jq -r '.result.panes[] | [.pane_id, ((.label // "") + (if .agent then " [" + .agent + "]" else "" end)), (.tab_id // "")] | @tsv' \
+      | fzf --prompt='move pane> ' --with-nth 2,3 --delimiter $'\t' --header 'label [agent]  tab' --layout=reverse-list \
+          --preview 'herdr pane read {1} --source recent-unwrapped --lines 12 2>/dev/null' | cut -f1)"
+  fi
+  [[ -z "$pane" ]] && return 1
+  choice="$({ printf '+ new tab\t__NEW__\n'; herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r '.result.tabs[] | "\(.label // "untitled")\t\(.tab_id)"' } \
+    | fzf --prompt='move to tab> ' --with-nth 1 --delimiter $'\t' --layout=reverse-list --header 'Enter: 既存タブへ / + new tab: 新規タブ作成')"
+  [[ -z "$choice" ]] && return 1
+  if [[ "${choice#*$'\t'}" == "__NEW__" ]]; then
+    read -r "label?new tab label (空なら自動命名): "
+    if [[ -n "$label" ]]; then
+      herdr pane move "$pane" --new-tab --label "$label"
+    else
+      herdr pane move "$pane" --new-tab
+    fi
+  else
+    tab="${choice#*$'\t'}"
+    herdr pane move "$pane" --tab "$tab" --split right
+  fi
+}
+
 # zsh補完: bunや他のcompdef呼び出しより前にcompinitを初期化。
 # キャッシュ(.zcompdump)が24時間以内なら-Cでセキュリティ監査をスキップして高速起動。
+fpath=(~/.zfunc $fpath)
 autoload -Uz compinit
 if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
   compinit
@@ -115,8 +157,10 @@ fi
 # デフォルトエディタ（herdr サーバー含むすべてのプロセスで使われる）。Zed を使う。
 # --wait がないと呼び出し元が即終了扱いになり、herdr のスクロールバック編集などで
 # 一時ファイルがエディタ起動前に削除されてしまう。
-export EDITOR="zed --wait"
-export VISUAL="zed --wait"
+export EDITOR="micro"
+export VISUAL="micro"
+# 戻すときは zed --wait（--wait がないと呼び出し元が即終了扱いになり、
+# herdr のスクロールバック編集などで一時ファイルがエディタ起動前に削除される）
 
 # 軽量な nvim-minimal プロファイルを明示的に使いたいときの別名
 # NVIM_APPNAME で切り替えることで、素の `nvim` コマンド（本体の LazyVim）とは
@@ -155,3 +199,24 @@ autoload -Uz compinit && compinit -C
 
 # opencode
 export PATH=/Users/nagata/.opencode/bin:$PATH
+
+# ashiato 補完: 「open 」等と打って Ctrl-G → 日時順ファイルを選んで挿入
+# （ashiato: 時間順ファイルピッカー。--files で fzf にデータソースを渡す）
+ashiato-complete-widget() {
+  local selected
+  selected=$(ashiato . --files --format tsv 2>/dev/null | fzf --multi --delimiter $'\t' \
+    --with-nth 1..2 --preview 'bat --color=always {3}' --header "$PWD" \
+    --bind 'ctrl-a:select-all' --layout=reverse-list)
+  if [[ -n "$selected" ]]; then
+    local paths=("${(@f)selected}")
+    paths=("${paths[@]##*$'\t'}")
+    local rel
+    for p in "${paths[@]}"; do
+      rel="${p/#$PWD\//}"
+      LBUFFER="${LBUFFER}${rel} "
+    done
+  fi
+  zle reset-prompt
+}
+zle -N ashiato-complete-widget
+bindkey '^G' ashiato-complete-widget

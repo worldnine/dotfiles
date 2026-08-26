@@ -79,7 +79,7 @@ const float DURATION = .5;
 const float OPACITY = .2;
 // Don't draw trail within that distance * cursor size.
 // This prevents trails from appearing when typing.
-const float DRAW_THRESHOLD = 1.5;
+const float DRAW_THRESHOLD = 8.0;
 // Don't draw trails within the same line: same line jumps are usually where
 // people expect them.
 const bool HIDE_TRAILS_ON_THE_SAME_LINE = false;

@@ -1,6 +1,6 @@
 [user]
-	name = YOUR_NAME
-	email = YOUR_EMAIL
+	name = worldnine
+	email = nagata@infosign.co.jp
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
