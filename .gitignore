@@ -38,3 +38,4 @@ gemini/.gemini/oauth_creds.json
 gemini/.gemini/history/
 gemini/.gemini/antigravity/
 gemini/.gemini/tmp/
+__pycache__/
