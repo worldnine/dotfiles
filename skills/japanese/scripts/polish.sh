@@ -87,6 +87,25 @@ USAGE
 
 die() { printf 'polish: %s\n' "$*" >&2; exit 1; }
 
+# 記法の保全チェック用。行数・字下げ行・行頭記号行・角括弧・バッククォートを数える。
+# 「記法を壊すな」とプロンプトで縛る代わりに、前後で数えて変化があれば知らせる。
+marker_counts() {
+  awk '
+    { lines++ }
+    /^[[:space:]]/ { indent++ }
+    /^[[:space:]]*[*#|>-]/ { bullet++ }
+    {
+      for (i = 1; i <= length($0); i++) {
+        c = substr($0, i, 1)
+        if (c == "[") ob++
+        else if (c == "]") cb++
+        else if (c == "`") bq++
+      }
+    }
+    END { printf "%d %d %d %d %d %d\n", lines, indent, bullet, ob, cb, bq }
+  ' "$1"
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -m|--model)    MODEL="${2:?--model には値が必要です}"; shift 2 ;;
@@ -282,6 +301,7 @@ PY
 
 # ---- 差分 ----------------------------------------------------------------
 echo "=== 推敲の差分（${ORIG_LABEL} / model=${MODEL} effort=${EFFORT}） ==="
+CHANGED=0
 if diff -q "$TMP/orig.txt" "$TMP/revised.txt" >/dev/null; then
   echo "変更なし（agy は手を入れませんでした）"
 else
@@ -290,6 +310,19 @@ else
   CHANGED=$(( DEL_LINES > ADD_LINES ? DEL_LINES : ADD_LINES ))
   diff -u --label "$ORIG_LABEL" --label "${ORIG_LABEL}（推敲後）" "$TMP/orig.txt" "$TMP/revised.txt" || true
   printf '\n変更: %s行（削除 %s / 追加 %s）\n' "$CHANGED" "$DEL_LINES" "$ADD_LINES"
+fi
+
+# 記法の崩れは機械で数える（プロンプトで縛ると出力が保守的になる）
+if [ "$CHANGED" -gt 0 ]; then
+  BEFORE_MARKERS="$(marker_counts "$TMP/orig.txt")"
+  AFTER_MARKERS="$(marker_counts "$TMP/revised.txt")"
+  if [ "$BEFORE_MARKERS" != "$AFTER_MARKERS" ]; then
+    read -r BL BI BB BO BC BQ <<< "$BEFORE_MARKERS"
+    read -r AL AI AB AO AC AQ <<< "$AFTER_MARKERS"
+    printf '※ 記法マーカーが変化（行 %s→%s / 字下げ %s→%s / 行頭記号 %s→%s / [ %s→%s / ] %s→%s / バッククォート %s→%s）\n' \
+      "$BL" "$AL" "$BI" "$AI" "$BB" "$AB" "$BO" "$AO" "$BC" "$AC" "$BQ" "$AQ"
+    echo "  崩れなら取捨で戻す。文章の都合で意図的に変えたなら無視してよい。"
+  fi
 fi
 
 # ---- 検証（after）: 指摘が減ったか ---------------------------------------
