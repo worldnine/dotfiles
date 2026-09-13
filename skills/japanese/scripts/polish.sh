@@ -285,7 +285,11 @@ echo "=== 推敲の差分（${ORIG_LABEL} / model=${MODEL} effort=${EFFORT}） =
 if diff -q "$TMP/orig.txt" "$TMP/revised.txt" >/dev/null; then
   echo "変更なし（agy は手を入れませんでした）"
 else
+  DEL_LINES=$(diff "$TMP/orig.txt" "$TMP/revised.txt" | grep -c '^< ' || true)
+  ADD_LINES=$(diff "$TMP/orig.txt" "$TMP/revised.txt" | grep -c '^> ' || true)
+  CHANGED=$(( DEL_LINES > ADD_LINES ? DEL_LINES : ADD_LINES ))
   diff -u --label "$ORIG_LABEL" --label "${ORIG_LABEL}（推敲後）" "$TMP/orig.txt" "$TMP/revised.txt" || true
+  printf '\n変更: %s行（削除 %s / 追加 %s）\n' "$CHANGED" "$DEL_LINES" "$ADD_LINES"
 fi
 
 # ---- 検証（after）: 指摘が減ったか ---------------------------------------
@@ -295,16 +299,19 @@ if [ "$LINT_OK" = 1 ] && [ -s "$TMP/revised.txt" ]; then
   if uv run "$LINT_PY" "${LINT_ARGS[@]}" "$TMP/revised.txt" > "$TMP/after.json" 2>/dev/null; then
     echo
     echo "=== AI臭さの検証（lint before → after） ==="
-    python3 - "$TMP/before.json" "$TMP/after.json" <<'PY'
+    python3 - "$TMP/before.json" "$TMP/after.json" "${CHANGED:-0}" <<'PY'
 import json
 import sys
 
 before = json.load(open(sys.argv[1], encoding="utf-8"))
 after = json.load(open(sys.argv[2], encoding="utf-8"))
+changed = int(sys.argv[3] or 0)
 s = after.get("baseline", {}).get("summary", {})
 b = before.get("stats", {}).get("total_findings", 0)
 a = after.get("stats", {}).get("total_findings", 0)
 print(f"検出件数: {b} → {a}（解消 {s.get('resolved', 0)} / 新規 {s.get('new', 0)} / 継続 {s.get('persisting', 0)}）")
+if b == a and not s.get("new", 0) and changed > 0:
+    print("※統計系（burstiness / TTR など）は文を書き換えても件数が動かない。上の変更行数と併せて判断する")
 for f in after.get("findings", []):
     if f.get("status") == "new":
         detail = " ".join((f.get("detail") or "").split())
