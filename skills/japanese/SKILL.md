@@ -2,7 +2,13 @@
 name: japanese
 description: 日本語の文章を書く・直す・推敲するスキル。議事録（文字起こしからの議事録化を含む）、調査レポート・分析レポート、社内ガイド・マニュアル、リサーチメモ・ディスカッションペーパー・企画書・提案書・報告書・メール、note・ブログ・エッセイ、スライド構成案の作成と推敲に使う。「AIっぽい」「AI臭い」「機械翻訳っぽい」「不自然」「もっと自然な日本語に」「人間っぽくして」「単調」「読みにくい」「語順がおかしい」「一文が長い」「読点の位置がおかしい」といった指摘、リライト・推敲・校正の依頼、ゼロからの執筆、AI臭さの診断・採点（「この文章AIが書いた？」「AI臭さをスコアで出して」）、textlint の実行、「Gemini に」「別モデルで」「agy で」推敲させたい依頼のいずれでも発火する。検出は機械（lint.py / textlint）、語感の判断は別モデル（agy 経由の Gemini）、最終判断は自分、という分担で進める。文章の自然さ・読みやすさ・わかりやすさが対象で、技術文書の章構成やMarkdownの整形自体は扱わない。
 license: MIT
+version: 1.0.0
+author: nagata
 argument-hint: "[write|polish|score|lint] [quick|full] [対象ファイルや依頼内容]"
+metadata:
+  hermes:
+    tags: [japanese, writing, proofreading, lint, ai-slop, gemini, agy, 日本語, 推敲, 校正, 議事録, レポート]
+    related_skills: [honkatsu]
 ---
 
 # japanese
