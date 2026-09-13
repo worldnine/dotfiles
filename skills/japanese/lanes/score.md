@@ -9,7 +9,7 @@
 ## 深さの指定
 
 - **quick（既定）** — lint のみ。30秒程度
-- **full** — 構造レビュー・読みやすさレビュー込み（`polish-self.md` の4を参照）
+- **full** — 構造レビュー・読みやすさレビュー込み（`polish-without-agy.md` の4を参照）
 - **exp** — `scripts/semantic.py` の深層検出込み。初回は約1GBのモデルダウンロードを伴う
 
 ## 進め方
@@ -20,4 +20,4 @@ cd <このスキルのディレクトリ> && uv run scripts/lint.py --json <file
 
 ジャンルが明確なら `--genre essay|tech|business` を付ける。出力は `references/diagnose.md` の式に沿ってスコアに変換し、バンドと理由を添えて返す。
 
-診断後にリライトを提案してよいが、**頼まれるまで直さない。**直してほしいと言われたら `polish-self.md`（または `polish-external.md`）へ移る。
+診断後にリライトを提案してよいが、**頼まれるまで直さない。**直してほしいと言われたら `polish.md` へ移る（agy を使わない場合は `polish-without-agy.md`）。

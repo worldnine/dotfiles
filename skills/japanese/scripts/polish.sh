@@ -18,6 +18,7 @@
 #   -g, --genre NAME     lint のジャンル別閾値 business|essay|tech
 #   -o, --output FILE    修正後の本文を FILE に書き出す（差分は常に表示）
 #   -w, --write          修正後で元ファイルを上書きする（.bak.<日時> を残す）
+#       --local-only      agy を呼ばず、lint の指摘だけを出す（自分で直すレーンへ）
 #       --no-lint        lint のヒント渡しと検証をやめる
 #       --policy-full    禁止語・翻訳調のカタログもプロンプトに同梱する
 #   -p, --prompt TEXT    追加指示を1つ渡す
@@ -27,6 +28,10 @@
 # 環境変数:
 #   AGY_BIN             agy の代わりに使う実行ファイル（既定: agy）
 #   JA_POLISH_MODEL     既定モデルの上書き（既定: gemini-3.8-flash-medium）
+#   JA_POLISH_EXTERNAL  off で外部送信を止める（agy を呼ばず lint だけ出す）
+#
+# 外部送信の停止: JA_POLISH_EXTERNAL=off、またはプロジェクトルートに
+#   .japanese-local-only を置く（対象ファイルのディレクトリから上に辿って探す）
 
 set -euo pipefail
 
@@ -45,6 +50,8 @@ WRITE=0
 OUTPUT=""
 USE_LINT=1
 POLICY_FULL=0
+LOCAL_ONLY=0
+LOCAL_ONLY_REASON=""
 EXTRA=""
 DRY_RUN=0
 INPUT=""
@@ -65,12 +72,16 @@ japanese/polish.sh — Antigravity CLI（agy / Gemini）に日本語を推敲さ
   -o, --output FILE    修正後の本文を FILE に書き出す（差分は常に表示）
   -w, --write          修正後で元ファイルを上書きする（.bak.<日時> を残す）
       --no-lint        lint のヒント渡しと検証をやめる
+      --local-only     agy を呼ばず、lint の指摘だけを出す（自分で直すレーンへ）
       --policy-full    禁止語・翻訳調のカタログもプロンプトに同梱する
   -p, --prompt TEXT    追加指示を1つ渡す
       --dry-run        プロンプトを表示して終了（agy は呼ばない）
   -h, --help           このヘルプ
 
 環境変数: AGY_BIN（agy の代わりに使う実行ファイル）
+          JA_POLISH_MODEL（既定モデル）
+          JA_POLISH_EXTERNAL=off（外部送信を止める）
+外部送信の停止: プロジェクトルートに .japanese-local-only を置いてもよい
 USAGE
 }
 
@@ -85,6 +96,7 @@ while [ $# -gt 0 ]; do
     -o|--output)   OUTPUT="${2:?--output には値が必要です}"; shift 2 ;;
     -w|--write)    WRITE=1; shift ;;
     --no-lint)     USE_LINT=0; shift ;;
+    --local-only)  LOCAL_ONLY=1; LOCAL_ONLY_REASON="--local-only"; shift ;;
     --policy-full) POLICY_FULL=1; shift ;;
     -p|--prompt)   EXTRA="${2:?--prompt には値が必要です}"; shift 2 ;;
     --dry-run)     DRY_RUN=1; shift ;;
@@ -148,6 +160,44 @@ if [ "$USE_LINT" = 1 ]; then
   else
     LINT_NOTE="lint をスキップしました（uv が見つかりません）"
   fi
+fi
+
+# ---- 外部送信の可否 ------------------------------------------------------
+# 既定では送る。JA_POLISH_EXTERNAL=off、またはプロジェクトルートの
+# .japanese-local-only が見つかったときだけ送らない。
+external_allowed() {
+  [ "${JA_POLISH_EXTERNAL:-on}" = "off" ] && return 1
+  local dir="$PWD"
+  if [ -n "$INPUT" ] && [ "$INPUT" != "-" ]; then dir="$(cd "$(dirname "$INPUT")" && pwd -P)"; fi
+  while [ -n "$dir" ] && [ "$dir" != "/" ]; do
+    [ -f "$dir/.japanese-local-only" ] && return 1
+    dir="$(dirname "$dir")"
+  done
+  return 0
+}
+
+if [ "$LOCAL_ONLY" = 0 ] && ! external_allowed; then
+  LOCAL_ONLY=1
+  LOCAL_ONLY_REASON="外部送信が無効（JA_POLISH_EXTERNAL=off か .japanese-local-only）"
+fi
+
+if [ "$LOCAL_ONLY" = 1 ] && [ "$DRY_RUN" = 0 ]; then
+  echo "=== 自分で直すモード（${LOCAL_ONLY_REASON}） ==="
+  echo "agy は呼びません。lanes/polish-without-agy.md の手順で進めてください。"
+  echo
+  if [ "$LINT_OK" = 1 ]; then
+    python3 - "$TMP/before.json" <<'PY'
+import json
+import sys
+
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+print("lint の指摘: %d 件\n" % d.get("stats", {}).get("total_findings", 0))
+PY
+    printf '%s\n' "$HINTS"
+  else
+    echo "（lint の結果はありません: ${LINT_NOTE}）"
+  fi
+  exit 0
 fi
 
 # ---- プロンプトの組み立て ------------------------------------------------

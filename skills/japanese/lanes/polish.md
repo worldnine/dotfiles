@@ -1,8 +1,15 @@
-# レーン: polish-external — 別モデル（agy / Gemini）に推敲させる
+# レーン: polish — 推敲（既定）
 
-日本語の語感の判断を、別系統のモデルに委ねるためのレーン。Claude や GPT はコードを正確に書くのに、日本語になると「効く」「動き出す」のような曖昧な動詞や直訳調が混ざる。その部分だけ Gemini に投げる。
+推敲の依頼が来たら、まずこのレーン。流れは4段。
 
-役割分担は3層。**検出は機械**（`scripts/lint.py`）、**語感の判断は別モデル**（agy 経由の Gemini）、**最終判断は自分**。agy の出力は提案であって正解ではない。
+1. **検出** — `scripts/lint.py` でAI臭さの疑いを機械的に拾う
+2. **書き換え** — `agy`（Antigravity CLI / Gemini）に推敲させる
+3. **取捨** — 返ってきた差分を読み、採るか戻すかを自分で決める
+4. **検証** — `scripts/lint.py --baseline` で指摘が本当に減ったか数える
+
+`scripts/polish.sh` が1〜4を1回でやる。理由は役割分担。**自分で直しても語感は戻らない**——AI臭い日本語を書いたのと同じ系統のモデルが直すことになるから。lint は検出と検証が得意で、書き換えは苦手。語感の書き換えは別系統のモデル（Gemini）に渡し、採るか戻すかの判断だけを自分が持つ。
+
+自分で直したいとき（agy を使えない環境、機密、数行の文）は `polish-without-agy.md` へ。
 
 ## 前提
 
@@ -37,18 +44,21 @@ cat draft.md | scripts/polish.sh -
 scripts/polish.sh --dry-run draft.md
 ```
 
-主なオプションは `-m/--model`、`-e/--effort low|medium|high`、`-t/--timeout`、`-g/--genre business|essay|tech`、`-o/--output`、`-w/--write`、`--no-lint`、`--policy-full`、`-p/--prompt "追加指示"`。全体は `--help` で出る。
+主なオプションは `-m/--model`、`-e/--effort low|medium|high`、`-t/--timeout`、`-g/--genre business|essay|tech`、`-o/--output`、`-w/--write`、`--no-lint`、`--local-only`、`--policy-full`、`-p/--prompt "追加指示"`。全体は `--help` で出る。
 
 **既定のモデルは `gemini-3.8-flash-medium`**（環境変数 `JA_POLISH_MODEL` でも変えられる）。agy のモデル名には effort が含まれる（`gemini-3.8-flash-low|medium|high`）ので、モデル名に `-low` / `-medium` / `-high` が付いているときは `--effort` を渡さず、名前のほうを正とする。`-e` を明示して食い違ったときは、無視した旨を stderr に出す。3.8 系は flash の3段階だけで、`lite` という名前のモデルは無い（`agy models` で一覧が出る）。
 
-## スクリプトがやっていること
+## 送信前の承認は取らない（既定）
 
-1. `scripts/lint.py --json` を回し、機械検出の指摘を「参考」としてプロンプトに同梱する（`--no-lint` で無効化）
-2. `prompts/policy.md` の校正ポリシーと本文を `<doc>` で囲んで `agy -p` に渡す
-3. 出力から本文だけを取り出し、元と `diff -u` で並べる
-4. もう一度 lint を `--baseline` つきで回し、指摘が減ったか（解消 / 新規 / 継続）を数える
+本文は Google アカウント経由で Gemini に送られる。**既定ではこれを止めない。**「送っていいですか」と毎回聞くと、判断が長引いて作業が止まるだけで、得るものが無い。止めたい場所は先に宣言しておく。
 
-`--policy-full` を付けると `references/forbidden-patterns.md` と `references/translationese.md` も同梱する。語彙の指摘が甘いと感じたときに使う（トークンは増える）。
+- 環境変数: `JA_POLISH_EXTERNAL=off`
+- プロジェクトに印を置く: プロジェクトルートに `.japanese-local-only`（空ファイルでよい）。`polish.sh` は対象ファイルのディレクトリから上に辿って探す
+- 単発で止める: `scripts/polish.sh --local-only draft.md`
+
+どれかが効いているとき、`polish.sh` は agy を呼ばず、lint の指摘だけを出して終わる。その結果を見て `polish-without-agy.md` に進む。`agy` が未導入・未サインインのときも同じ扱いで、自分で直すレーンに切り替える。
+
+顧客名や社外秘が混ざる文書を扱うプロジェクトでは、最初に `.japanese-local-only` を置いておくのが安全。
 
 ## agy の出力をそのまま採用しない
 
@@ -69,9 +79,18 @@ agy は指示を守らず、まれに前置き（「以下が修正後です」�
 - LLM常套句の削除、強調の偏りの解消、文の長短の調整
 - 表記・用語の統一
 
-lint の増減は判断の材料であって結論ではない。**解消が増えても新規が出ていれば失敗**（別のAI臭さを作っただけ）。逆に件数が減らなくても、読みやすくなっていれば採用してよい。
+lint の増減は判断の材料であって結論ではない。**解消が増えても新規が出ていれば失敗**（別のAI臭さを作っただけ）。逆に件数が減らなくても、読みやすくなっていれば採用してよい。とくに `low_burstiness` や `low_lexical_diversity_ttr` のような統計系は文を書き換えないと動かないので、「件数が減らないから失敗」と即断しない。
 
 全文を通すと差分が大きくなりがちなので、まず1ファイルで試してポリシーの効き方を見てから本番の文書に当てる。効きが弱い・強すぎるときは `prompts/policy.md` の「直す対象」「判断の原則」を調整する。
+
+## スクリプトがやっていること
+
+1. `scripts/lint.py --json` を回し、機械検出の指摘を「参考」としてプロンプトに同梱する（`--no-lint` で無効化）
+2. `prompts/policy.md` の校正ポリシーと本文を `<doc>` で囲んで `agy -p` に渡す
+3. 出力から本文だけを取り出し、元と `diff -u` で並べる
+4. もう一度 lint を `--baseline` つきで回し、指摘が減ったか（解消 / 新規 / 継続）を数える
+
+`--policy-full` を付けると `references/forbidden-patterns.md` と `references/translationese.md` も同梱する。語彙の指摘が甘いと感じたときに使う（トークンは増える）。
 
 ## 困ったとき
 
