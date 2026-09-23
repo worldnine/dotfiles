@@ -8,7 +8,6 @@ argument-hint: "[write|polish|score|lint] [quick|full] [対象ファイルや依
 metadata:
   hermes:
     tags: [japanese, writing, proofreading, lint, ai-slop, gemini, agy, 日本語, 推敲, 校正, 議事録, レポート]
-    related_skills: [honkatsu]
 ---
 
 # japanese
