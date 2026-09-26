@@ -123,6 +123,7 @@ autoload -Uz compinit
 # - g     : ghq 配下を fzf で絞り込んで cd（本棚）
 # - tryon : ghq の正本を選び、その上で try . で実験 worktree を切る
 # - j     : ghq と ~/src/tries を横断する汎用 jump
+# - tryup : 続けることにした try を ghq へ昇格（owner は worldnine / infosign などから選ぶ）
 # - gw/gwa/gwl/gwst : gwq の薄い alias（cd/add/list/status）
 [ -f /Users/nagata/.zsh/ghq.sh ] && source ~/.zsh/ghq.sh
 
