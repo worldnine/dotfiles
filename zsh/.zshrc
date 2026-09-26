@@ -87,14 +87,25 @@ mvp() {
 }
 
 # zsh補完: bunや他のcompdef呼び出しより前にcompinitを初期化。
-# キャッシュ(.zcompdump)が24時間以内なら-Cでセキュリティ監査をスキップして高速起動。
-fpath=(~/.zfunc $fpath)
+# キャッシュ(.zcompdump)が24時間以内なら-Cでセキュリティ監査と作り直しの判定をスキップして高速起動。
+# - (#q) の glob 修飾子は extended_glob が無いと効かず、条件が常に真で毎回フル compinit になっていた。
+#   グローバルには影響させたくないので、無名関数の中だけで有効にする
+# - フル compinit は fpath の補完ファイル数が .zcompdump と違うと作り直す（約1.4秒）。
+#   site-functions は brew shellenv（ログインシェルのみ）が追加するので、ここでも追加して fpath を揃える
+# - フル compinit は .zcompdump が有効なら書き換えないので、touch して24時間の起点を更新する
+# - compinit の既定の保存先は ${ZDOTDIR:-$HOME} なので、判定と食い違わないよう -d で明示する
+typeset -U fpath
+fpath=(~/.grok/completions/zsh ~/.zfunc /opt/homebrew/share/zsh/site-functions $fpath)
 autoload -Uz compinit
-if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
-  compinit
-else
-  compinit -C
-fi
+() {
+  setopt local_options extended_glob
+  local dump=${HOME}/.zcompdump
+  if [[ -n ${dump}(#qN.mh+24) ]]; then
+    compinit -d $dump && touch $dump
+  else
+    compinit -C -d $dump
+  fi
+}
 
 # bun completions（PATH設定は.zshenvに移動済み）
 [ -s "/Users/nagata/.bun/_bun" ] && source "/Users/nagata/.bun/_bun"
@@ -170,13 +181,20 @@ alias nvmin="env NVIM_APPNAME=nvim-minimal nvim"
 
 
 
+# init 系コマンドの出力キャッシュ（.zprofile で読み込み済みなら不要。非ログインシェル用）
+(( $+functions[_zsh_init_cache] )) || source ~/.zsh/init-cache.zsh
+
 # fzf: 非TTY環境でのzleエラーを抑制
+# 以前は ~/.fzf.zsh 経由で source <(fzf --zsh) していたが、毎回約50msかかるので出力をキャッシュする
 if [[ -o interactive ]]; then
-  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+  _zsh_init_cache fzf /opt/homebrew/opt/fzf/bin/fzf '/opt/homebrew/opt/fzf/bin/fzf --zsh' && source $REPLY
 fi
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
-eval "$(/Users/nagata/.local/share/mise/shims/ruby ~/.local/try.rb init ~/src/tries | sed 's|/usr/bin/env ruby|/Users/nagata/.local/share/mise/shims/ruby|g')"
+# try: init のたびに ruby が起動して約100msかかるので、出力をキャッシュする（try.rb の更新時に作り直し）
+_zsh_init_cache try ~/.local/try.rb \
+  "/Users/nagata/.local/share/mise/shims/ruby ~/.local/try.rb init ~/src/tries | sed 's|/usr/bin/env ruby|/Users/nagata/.local/share/mise/shims/ruby|g'" \
+  && source $REPLY
 
 # Amazon Q post block. Keep at the bottom of this file.
 # 一時的にコメントアウト（Ghosttyのパフォーマンス問題調査のため）
@@ -193,8 +211,7 @@ export OPENAI_BASE_URL=https://opencode.ai/zen/go/v1
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
-fpath=(~/.grok/completions/zsh $fpath)
-autoload -Uz compinit && compinit -C
+# fpath の追加は上の「zsh補完」ブロックへ移した（compinit を2回呼ばないため）
 # <<< grok installer <<<
 
 # opencode
