@@ -6,4 +6,3 @@
 # AI/LLMプロバイダのロゴグリフ（Claude/OpenAI/opencode等、plane 15）
 # https://github.com/hschne/lobe-icons-font
 font-codepoint-map = U+F4000-U+F47FF=lobe-icons
-theme = cyberdream
