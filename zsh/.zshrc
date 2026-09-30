@@ -86,6 +86,14 @@ mvp() {
   fi
 }
 
+# herdr: ドックにGhosttyのアイコンが増えたり跳ね続けたりするのを防ぐ（herdrdev/herdr#4411）。
+# herdrのクライアントやサーバーの下で動くプログラムが、Ghostty名義で登録されるのが原因。
+# クライアントは起動元のGhosttyを引き継がずに起動し、サーバーはHerdr Server Host.appから起動する。
+# サブコマンドなしの`herdr`だけを扱う関数。.appが無ければ何もしない。
+# ソース: ~/src/tries/2026-09-30-herdr-server-host
+[ -f ~/Applications/HerdrServerHost.app/Contents/Resources/herdr-server-host.zsh ] && \
+  source ~/Applications/HerdrServerHost.app/Contents/Resources/herdr-server-host.zsh
+
 # zsh補完: bunや他のcompdef呼び出しより前にcompinitを初期化。
 # キャッシュ(.zcompdump)が24時間以内なら-Cでセキュリティ監査と作り直しの判定をスキップして高速起動。
 # - (#q) の glob 修飾子は extended_glob が無いと効かず、条件が常に真で毎回フル compinit になっていた。
