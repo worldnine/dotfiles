@@ -238,3 +238,9 @@ ashiato-complete-widget() {
 }
 zle -N ashiato-complete-widget
 bindkey '^G' ashiato-complete-widget
+
+# mf-expense (マネーフォワード クラウド経費 CLI)
+# 資格情報は 1Password から遅延取得する。login とトークンのリフレッシュ時にだけ op が走るので、
+# シェル起動は遅くならない。通常の add / list / items では op は呼ばれない。
+export MF_EXPENSE_CLIENT_ID_CMD='op read --account infosign.1password.com "op://Private/mf-expense CLI/username"'
+export MF_EXPENSE_CLIENT_SECRET_CMD='op read --account infosign.1password.com "op://Private/mf-expense CLI/credential"'
