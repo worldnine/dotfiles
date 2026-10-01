@@ -6,3 +6,8 @@
 # AI/LLMプロバイダのロゴグリフ（Claude/OpenAI/opencode等、plane 15）
 # https://github.com/hschne/lobe-icons-font
 font-codepoint-map = U+F4000-U+F47FF=lobe-icons
+
+# >>> herdr-radar font block
+font-codepoint-map = U+E1A0-U+E1B7=Herdr Agent Icons Max
+font-codepoint-map = U+E1C0-U+E1C5=Herdr Agent Icons Max
+# <<< herdr-radar font block
